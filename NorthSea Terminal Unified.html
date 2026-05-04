@@ -1,0 +1,2811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440,initial-scale=1">
+<title>NorthSea Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   NorthSea Terminal — Visual System
+
+   Three intentional modes, each engineered for a specific working
+   condition. NOT "themes" — the colour roles, depth model and signal
+   palette are tuned per mode rather than swapped randomly.
+
+     workspace : Light Workspace — daytime analysis, long reading
+     terminal  : Terminal (default) — trading-desk environment
+     focus     : Focus — monitoring, decision-making, low-light
+
+   Token taxonomy (stable across modes):
+     Surface depth   : --bg-base   --bg-elev   --bg-panel   --bg-sunken
+     Text hierarchy  : --fg        --fg-muted  --fg-subtle  --fg-faint
+     Structure       : --rule      --rule-strong
+     Brand accent    : --accent    --accent-soft
+     Signal colors   : --bull --bull-soft   --bear --bear-soft
+                       --warn --warn-soft   --info
+     Chrome          : --header-bg --header-fg  (intentionally dark in workspace)
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --radius: 2px;
+  /* Inter globally — applied to text, UI and numbers for a clean,
+     neutral grotesque feel. Tabular numerals are enabled on body so
+     columns of figures align cleanly. */
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-ui:      'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-num:     'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Mode 1 · LIGHT WORKSPACE ─────────────────────────────────────
+   Soft white / light grey base, dark charcoal-navy header for
+   premium contrast, subtle layering rather than flat white. Bull/bear
+   are deep and ink-like — never neon — to keep dense data calm.       */
+[data-mode="workspace"] {
+  --bg-base:     #f4f5f7;
+  --bg-elev:     #fbfbfc;
+  --bg-panel:    #ffffff;
+  --bg-sunken:   #eef0f3;
+  --fg:          #0e1320;
+  --fg-muted:    #3a4150;
+  --fg-subtle:   #6c7383;
+  --fg-faint:    #9aa0ad;
+  --rule:        #e3e6ec;
+  --rule-strong: #cfd4dd;
+  --accent:      #b35a14;
+  --accent-soft: #f4e6d4;
+  --bull:        #117a3a;
+  --bull-soft:   #e1efe4;
+  --bear:        #b32418;
+  --bear-soft:   #f5dfdb;
+  --warn:        #a36a0a;
+  --warn-soft:   #f4e8cc;
+  --info:        #3a4150;
+  --chip-bg:     #eef0f3;
+  --header-bg:   #11161f;
+  --header-fg:   #e6e8ee;
+  --header-rule: #1d2330;
+  --shadow-sm:   0 1px 0 rgba(14,19,32,0.04);
+  --shadow-md:   0 1px 2px rgba(14,19,32,0.06), 0 0 0 1px rgba(14,19,32,0.03);
+  --inner-glow:  inset 0 0 0 1px rgba(255,255,255,0.6);
+}
+
+/* ── Mode 2 · TERMINAL (default) ──────────────────────────────────
+   ORIGINAL parchment palette — preserved 1:1 from the initial
+   NorthSea Terminal design. Warm cream background, ink-brown
+   typography, deep amber accent, paper-like layering. This is the
+   reference look — Workspace and Focus are siblings, not overrides. */
+[data-mode="terminal"] {
+  --bg-base:     #efe9dc;
+  --bg-elev:     #ede6d6;
+  --bg-panel:    #f6f1e5;
+  --bg-sunken:   #e8e1d1;
+  --fg:          #1a1510;
+  --fg-muted:    #3c342a;
+  --fg-subtle:   #6b6356;
+  --fg-faint:    #9c9488;
+  --rule:        #d6ccb9;
+  --rule-strong: #c4b89f;
+  --accent:      #a86a1a;
+  --accent-soft: #efdeb4;
+  --bull:        #0f8a43;
+  --bull-soft:   #e1ecd9;
+  --bear:        #b02a1e;
+  --bear-soft:   #f1dcd4;
+  --warn:        #a86a1a;
+  --warn-soft:   #efdeb4;
+  --info:        #6b6356;
+  --chip-bg:     #e4dcc7;
+  --header-bg:   #1a1510;
+  --header-fg:   #f6f1e5;
+  --header-rule: #2a221a;
+  --shadow-sm:   0 1px 0 rgba(26,21,16,0.04);
+  --shadow-md:   0 1px 2px rgba(26,21,16,0.06), 0 0 0 1px rgba(26,21,16,0.03);
+  --inner-glow:  inset 0 0 0 1px rgba(255,255,255,0.4);
+}
+
+/* ── Mode 3 · FOCUS ────────────────────────────────────────────────
+   Deeper, quieter, near-monochrome. UI noise stripped back to
+   structure. Only key signal colours retain saturation; accent fades
+   into the chrome. For monitoring runs and decision moments.          */
+[data-mode="focus"] {
+  --bg-base:     #0a0c10;
+  --bg-elev:     #0d1014;
+  --bg-panel:    #0f1217;
+  --bg-sunken:   #07090c;
+  --fg:          #d8dbe1;
+  --fg-muted:    #8a8f99;
+  --fg-subtle:   #565b64;
+  --fg-faint:    #353941;
+  --rule:        #181b21;
+  --rule-strong: #232830;
+  --accent:      #8a8f99;
+  --accent-soft: #16191e;
+  --bull:        #3fb56b;
+  --bull-soft:   #0e1b13;
+  --bear:        #e0524a;
+  --bear-soft:   #1c100f;
+  --warn:        #c89048;
+  --warn-soft:   #1a140c;
+  --info:        #8a8f99;
+  --chip-bg:     #14171c;
+  --header-bg:   #07090c;
+  --header-fg:   #d8dbe1;
+  --header-rule: #14171c;
+  --shadow-sm:   0 1px 0 rgba(0,0,0,0.5);
+  --shadow-md:   0 1px 2px rgba(0,0,0,0.6);
+  --inner-glow:  none;
+}
+
+/* ── Aliases for legacy class names (--bg, --ink, --up, --down …) ──
+   The app code references the older token names. Map them so the
+   refined token system drives every existing component without a
+   ground-up rewrite.                                                  */
+:root, [data-mode] {
+  --bg:        var(--bg-base);
+  --bg-soft:   var(--bg-sunken);
+  --panel:     var(--bg-panel);
+  --panel-2:   var(--bg-elev);
+  --ink:       var(--fg);
+  --ink-2:     var(--fg-muted);
+  --ink-3:     var(--fg-subtle);
+  --ink-4:     var(--fg-faint);
+  --rule-2:    var(--rule-strong);
+  --up:        var(--bull);
+  --up-bg:     var(--bull-soft);
+  --down:      var(--bear);
+  --down-bg:   var(--bear-soft);
+  --warn-bg:   var(--warn-soft);
+  --neutral:   var(--info);
+  --shadow:    var(--shadow-sm);
+}
+
+
+/* ─── Verdict Hero ───────────────────────────────────────── */
+.verdict {
+  padding: 22px 22px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--rule-2);
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 28px;
+}
+.verdict .vd-left { display: flex; flex-direction: column; gap: 10px; }
+.verdict .vd-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.verdict .vd-tag .led {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.verdict.bullish .vd-tag .led { background: var(--up); box-shadow: 0 0 0 4px var(--up-bg); }
+.verdict.bearish .vd-tag .led { background: var(--down); box-shadow: 0 0 0 4px var(--down-bg); }
+.verdict.neutral .vd-tag .led { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); }
+.verdict .vd-tag .stance {
+  color: var(--ink); font-weight: 700; letter-spacing: 0.12em;
+}
+.verdict.bullish .vd-tag .stance { color: var(--up); }
+.verdict.bearish .vd-tag .stance { color: var(--down); }
+.verdict.neutral .vd-tag .stance { color: var(--warn); }
+.verdict .vd-headline {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+  max-width: 640px;
+}
+.verdict .vd-headline {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+.verdict .vd-reasons {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 4px;
+}
+.verdict .vd-reason {
+  display: flex; gap: 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  align-items: flex-start;
+}
+.verdict .vd-reason::before {
+  content: ''; flex-shrink: 0;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-4);
+  margin-top: 7px;
+}
+.verdict.bullish .vd-reason.up::before { background: var(--up); }
+.verdict.bearish .vd-reason.down::before { background: var(--down); }
+.verdict.neutral .vd-reason.warn::before { background: var(--warn); }
+.verdict .vd-reason b { color: var(--ink); font-weight: 600; }
+.verdict .vd-meta {
+  display: flex; gap: 22px;
+  margin-top: 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+}
+.verdict .vd-meta .it { display: inline-flex; gap: 6px; align-items: center; }
+.verdict .vd-meta .it .v { color: var(--ink-2); }
+
+.verdict .vd-right {
+  display: flex; flex-direction: column;
+  gap: 10px;
+  padding-left: 24px;
+  border-left: 1px solid var(--rule);
+}
+.verdict .vd-spot-label {
+  font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+}
+.verdict .vd-spot {
+  display: flex; align-items: baseline; gap: 6px;
+  font-family: var(--font-num);
+}
+.verdict .vd-spot .vp {
+  font-size: 36px; font-weight: 600;
+  color: var(--ink); letter-spacing: -0.01em; line-height: 1;
+}
+.verdict .vd-spot .vu { font-size: 11px; color: var(--ink-3); }
+.verdict .vd-spot .vd {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* 52-week range bar */
+.range-strip { margin-top: 4px; }
+.range-strip .rs-bar {
+  position: relative;
+  height: 4px;
+  background: var(--chip-bg);
+  border-radius: 2px;
+}
+.range-strip .rs-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.18;
+}
+.range-strip .rs-pin {
+  position: absolute;
+  top: -2px;
+  width: 2px; height: 8px;
+  background: var(--accent);
+  border-radius: 1px;
+  transform: translateX(-50%);
+}
+.range-strip .rs-labels {
+  display: flex; justify-content: space-between;
+  margin-top: 6px;
+  font-size: 9.5px;
+  font-family: var(--font-num);
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.range-strip .rs-labels .rs-here {
+  color: var(--ink); font-weight: 600;
+}
+.range-strip .rs-context {
+  font-size: 10.5px;
+  color: var(--ink-2);
+  margin-top: 6px;
+  letter-spacing: -0.005em;
+}
+.range-strip .rs-context b { color: var(--ink); font-weight: 600; }
+
+/* ─── Primary signal (large card) + secondary signals (smaller) ─── */
+.signals-stack {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 0;
+}
+.signal-primary {
+  padding: 18px 20px;
+  border-right: 1px solid var(--rule);
+  background: var(--bg);
+}
+.signal-primary .sp-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.signal-primary .sp-led {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.signal-primary.bullish .sp-led { background: var(--up); box-shadow: 0 0 0 4px var(--up-bg); }
+.signal-primary.bearish .sp-led { background: var(--down); box-shadow: 0 0 0 4px var(--down-bg); }
+.signal-primary.neutral .sp-led { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); }
+.signal-primary .sp-tag {
+  font-size: 9.5px; letter-spacing: 0.14em; font-weight: 700;
+}
+.signal-primary.bullish .sp-tag { color: var(--up); }
+.signal-primary.bearish .sp-tag { color: var(--down); }
+.signal-primary.neutral .sp-tag { color: var(--warn); }
+.signal-primary .sp-impact {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 9px; letter-spacing: 0.12em;
+  color: var(--ink-3); font-weight: 600;
+}
+.signal-primary .sp-impact .impact-bars {
+  display: inline-flex; gap: 2px; align-items: flex-end;
+}
+.signal-primary .sp-impact .impact-bars span {
+  display: inline-block;
+  width: 3px; background: var(--ink-4);
+}
+.signal-primary .sp-impact .impact-bars span.b1 { height: 4px; }
+.signal-primary .sp-impact .impact-bars span.b2 { height: 7px; }
+.signal-primary .sp-impact .impact-bars span.b3 { height: 10px; }
+.signal-primary.high .sp-impact .impact-bars span { background: var(--ink); }
+.signal-primary.med .sp-impact .impact-bars span.b1,
+.signal-primary.med .sp-impact .impact-bars span.b2 { background: var(--ink-2); }
+.signal-primary.low .sp-impact .impact-bars span.b1 { background: var(--ink-2); }
+.signal-primary .sp-headline {
+  font-size: 17px;
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.28;
+  margin-bottom: 8px;
+}
+.signal-primary .sp-detail {
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.signal-primary .sp-detail b { color: var(--ink); font-weight: 600; }
+.signal-primary .sp-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; letter-spacing: 0.06em;
+  color: var(--ink-3);
+  padding: 5px 10px;
+  background: var(--chip-bg);
+  border-radius: var(--radius);
+}
+.signal-primary .sp-action b { color: var(--ink); font-weight: 600; }
+
+.signal-secondaries {
+  display: grid;
+  grid-template-rows: 1fr 1fr 1fr;
+}
+.signal-sec {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--rule);
+  display: flex; align-items: center; gap: 10px;
+}
+.signal-sec:last-child { border-bottom: none; }
+.signal-sec .ss-led {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.signal-sec.bullish .ss-led { background: var(--up); }
+.signal-sec.bearish .ss-led { background: var(--down); }
+.signal-sec.neutral .ss-led { background: var(--warn); }
+.signal-sec .ss-content { flex: 1; min-width: 0; }
+.signal-sec .ss-headline {
+  font-size: 11.5px;
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+}
+.signal-sec .ss-meta {
+  display: flex; gap: 8px;
+  font-size: 9px; letter-spacing: 0.1em;
+  color: var(--ink-3);
+  font-weight: 600;
+  margin-top: 3px;
+}
+.signal-sec.bullish .ss-tag { color: var(--up); }
+.signal-sec.bearish .ss-tag { color: var(--down); }
+.signal-sec.neutral .ss-tag { color: var(--warn); }
+.signal-sec .ss-impact {
+  display: inline-flex; gap: 1.5px; align-items: flex-end;
+  flex-shrink: 0;
+}
+.signal-sec .ss-impact span {
+  display: inline-block; width: 2.5px; background: var(--ink-4);
+}
+.signal-sec .ss-impact span.b1 { height: 3px; }
+.signal-sec .ss-impact span.b2 { height: 5px; }
+.signal-sec .ss-impact span.b3 { height: 7px; }
+.signal-sec.high .ss-impact span { background: var(--ink); }
+.signal-sec.med .ss-impact span.b1,
+.signal-sec.med .ss-impact span.b2 { background: var(--ink-2); }
+.signal-sec.low .ss-impact span.b1 { background: var(--ink-2); }
+
+/* ─── Insight enhancements ─── */
+.insight {
+  padding: 11px 16px 12px;
+}
+.insight .ihead { gap: 8px; align-items: center; }
+.insight .iimpact {
+  margin-left: auto;
+  display: inline-flex; gap: 1.5px; align-items: flex-end;
+}
+.insight .iimpact span {
+  display: inline-block; width: 2.5px; background: var(--ink-4);
+}
+.insight .iimpact span.b1 { height: 3px; }
+.insight .iimpact span.b2 { height: 5px; }
+.insight .iimpact span.b3 { height: 7px; }
+.insight.high .iimpact span { background: var(--ink); }
+.insight.med .iimpact span.b1, .insight.med .iimpact span.b2 { background: var(--ink-2); }
+.insight.low .iimpact span.b1 { background: var(--ink-2); }
+.insight .iwhy {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: 6px;
+}
+.insight .iwhy::before { content: '→ '; }
+
+/* ─── Sidebar slimming: condense rows ─── */
+.sidebar { font-size: 11px; }
+.sb-row { padding: 5px 14px; }
+.sb-row .name { font-size: 11px; }
+.sb-section.minor { opacity: 0.92; }
+.sb-section.minor .sb-head { font-size: 8.5px; }
+
+/* ─── Hide redundant signals panel when verdict + primary used ─── */
+.signals-stack + .panel { border-top: 1px solid var(--rule); }
+
+
+/* ─── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.4;
+  font-feature-settings: "zero", "ss01";
+  font-variant-numeric: tabular-nums lining-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+.num { font-variant-numeric: tabular-nums lining-nums; font-family: var(--font-num); }
+.up   { color: var(--up); }
+.down { color: var(--down); }
+.warn { color: var(--warn); }
+
+/* ─── Layout shell ─────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-rows: 56px 30px 1fr 24px;
+  grid-template-columns: 220px 1fr 320px;
+  height: 100vh;
+}
+
+.topbar {
+  grid-row: 1; grid-column: 1 / 4;
+  display: flex; align-items: center;
+  padding: 0 18px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-rule);
+  gap: 18px;
+  color: var(--header-fg);
+}
+.topbar .brand { border-right-color: color-mix(in srgb, var(--header-fg) 14%, transparent); }
+
+.brand {
+  display: flex; align-items: center; gap: 9px;
+  padding-right: 16px;
+  border-right: 1px solid var(--rule);
+  height: 32px;
+}
+.brand .sigil {
+  width: 20px; height: 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  opacity: 0.95;
+}
+[data-mode="focus"] .brand .sigil { color: var(--header-fg); opacity: 0.7; }
+.brand .word {
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 600;
+  color: var(--header-fg);
+  letter-spacing: 0.01em;
+}
+.brand .word .terminal {
+  font-family: var(--font-ui);
+  font-size: 9px; letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--header-fg) 55%, transparent);
+  margin-left: 7px;
+  font-weight: 500;
+}
+
+
+.industry-tabs {
+  display: flex; gap: 0;
+  height: 100%;
+  align-items: stretch;
+}
+.industry-tab {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px;
+  background: transparent; border: none; cursor: pointer;
+  color: color-mix(in srgb, var(--header-fg) 55%, transparent);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid transparent;
+  transition: color 120ms;
+  position: relative;
+  white-space: nowrap;
+}
+.industry-tab .icon {
+  width: 14px; height: 14px;
+  opacity: 0.7;
+  display: inline-flex;
+}
+.industry-tab:hover:not([disabled]) { color: color-mix(in srgb, var(--header-fg) 85%, transparent); }
+.industry-tab.active {
+  color: var(--header-fg);
+  border-bottom-color: var(--accent);
+}
+.industry-tab.active .icon { opacity: 1; color: var(--accent); }
+[data-mode="focus"] .industry-tab.active { border-bottom-color: var(--header-fg); }
+[data-mode="focus"] .industry-tab.active .icon { color: var(--header-fg); }
+.industry-tab[disabled] { opacity: 0.55; cursor: default; }
+.industry-tab .soon {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  padding: 1px 5px;
+  background: var(--chip-bg);
+  color: var(--ink-3);
+  border-radius: var(--radius);
+}
+
+.topbar-spacer { flex: 1; }
+
+.cmdbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px;
+  height: 28px;
+  min-width: 320px;
+  background: color-mix(in srgb, var(--header-fg) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--header-fg) 10%, transparent);
+  border-radius: var(--radius);
+  color: color-mix(in srgb, var(--header-fg) 55%, transparent);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms;
+}
+.cmdbar:hover {
+  border-color: color-mix(in srgb, var(--header-fg) 18%, transparent);
+  background: color-mix(in srgb, var(--header-fg) 9%, transparent);
+}
+.cmdbar svg { color: color-mix(in srgb, var(--header-fg) 55%, transparent); }
+.cmdbar kbd {
+  margin-left: auto;
+  font-family: var(--font-num);
+  font-size: 9.5px;
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--header-fg) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--header-fg) 12%, transparent);
+  border-radius: 3px;
+  color: color-mix(in srgb, var(--header-fg) 50%, transparent);
+}
+
+.session-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 3px 9px;
+  background: color-mix(in srgb, var(--bull) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bull) 28%, transparent);
+  border-radius: var(--radius);
+}
+.session-pill .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--bull);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--bull) 60%, transparent);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.session-pill.closed {
+  background: color-mix(in srgb, var(--bear) 14%, transparent);
+  border-color: color-mix(in srgb, var(--bear) 28%, transparent);
+}
+.session-pill.closed .dot { background: var(--bear); box-shadow: none; animation: none; }
+.session-pill .lbl {
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--header-fg);
+  font-weight: 600;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.clock {
+  display: flex; flex-direction: column; align-items: flex-end;
+  font-family: var(--font-num);
+  line-height: 1.1;
+}
+.clock .t { font-size: 12.5px; font-weight: 500; color: var(--header-fg); letter-spacing: 0.02em; }
+.clock .d { font-size: 9px; color: color-mix(in srgb, var(--header-fg) 55%, transparent); letter-spacing: 0.1em; margin-top: 2px; font-weight: 500; }
+
+/* ── Mode switcher (segmented, lives in header) ────────────────── */
+.mode-switch {
+  display: inline-flex;
+  align-items: stretch;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--header-fg) 12%, transparent);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--header-fg) 4%, transparent);
+}
+.mode-switch button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 10px;
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--header-fg) 50%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--header-fg) 10%, transparent);
+  transition: color 120ms, background 120ms;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.mode-switch button:last-child { border-right: none; }
+.mode-switch button:hover { color: color-mix(in srgb, var(--header-fg) 80%, transparent); }
+.mode-switch button.on {
+  color: var(--header-fg);
+  background: color-mix(in srgb, var(--header-fg) 10%, transparent);
+}
+.mode-switch .glyph {
+  width: 8px; height: 8px;
+  display: inline-block;
+  border-radius: 1px;
+  border: 1px solid currentColor;
+  opacity: 0.7;
+}
+.mode-switch .glyph.workspace { background: currentColor; opacity: 0.9; border-color: transparent; }
+.mode-switch .glyph.terminal  { background: linear-gradient(to bottom, currentColor 50%, transparent 50%); opacity: 0.7; border-color: currentColor; }
+.mode-switch .glyph.focus     { background: transparent; opacity: 0.55; }
+
+/* ─── Macro strip (row 2) ─────────────────────────────────── */
+/* ─── Macro strip (row 2) ───────────────────────────── */
+.strip {
+  grid-row: 2; grid-column: 1 / 4;
+  display: flex; align-items: center;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 0 18px;
+  overflow: hidden;
+  height: 30px;
+  font-size: 11px;
+  gap: 18px;
+}
+.strip .live-dot {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--fg-subtle);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.strip .live-dot::before {
+  content: '';
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--bull);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--bull) 50%, transparent);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.strip-track {
+  display: flex; align-items: center; gap: 26px;
+  flex: 1; min-width: 0;
+  overflow: hidden;
+}
+.strip-cell {
+  display: flex; align-items: baseline; gap: 7px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.strip-cell .k { color: var(--ink-3); font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; }
+.strip-cell .v { color: var(--ink); font-weight: 600; }
+.strip-cell .d { font-size: 10.5px; }
+
+/* ─── Sidebar ──────────────────────────────────────────────── */
+.sidebar {
+  grid-row: 3; grid-column: 1;
+  background: var(--panel);
+  border-right: 1px solid var(--rule);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.sb-section {
+  border-bottom: 1px solid var(--rule);
+}
+.sb-head {
+  padding: 10px 14px 6px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.sb-head .count {
+  font-family: var(--font-num);
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+}
+.sb-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 100ms;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 50%, transparent);
+}
+.sb-row:last-child { border-bottom: none; }
+.sb-row:hover { background: var(--bg-soft); }
+.sb-row .name { font-size: 11.5px; color: var(--ink); font-weight: 500; }
+.sb-row .ticker { font-size: 9.5px; color: var(--ink-3); margin-top: 1px; letter-spacing: 0.04em; }
+.sb-row .v { font-size: 11px; }
+.sb-row .v .pct { font-size: 10px; }
+.sb-row .v .secondary { font-size: 9.5px; color: var(--ink-3); margin-top: 1px; text-align: right; }
+
+.bio-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.bio-pill .led { width: 6px; height: 6px; border-radius: 50%; }
+.bio-pill .led.ok { background: var(--up); }
+.bio-pill .led.warn { background: var(--warn); }
+.bio-pill .led.bad { background: var(--down); }
+
+/* ─── Main panel ────────────────────────────────────────────── */
+.main {
+  grid-row: 3; grid-column: 2;
+  overflow-y: auto;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+}
+
+.panel {
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+}
+.panel-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.panel-head .title {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.panel-head .title b { color: var(--ink); font-weight: 600; }
+.panel-head .aux {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.panel-head .aux .api-coming {
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  background: var(--warn-bg);
+  color: var(--warn);
+  padding: 2px 7px;
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+.panel-head .tabs {
+  display: flex; gap: 0;
+}
+.panel-head .tab {
+  padding: 3px 10px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink-3);
+  font-size: 10px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid transparent;
+  margin-bottom: -1px;
+}
+.panel-head .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ─── Signals panel ─────────────────────────────────────────── */
+.signals {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.signal {
+  padding: 12px 18px;
+  border-right: 1px solid var(--rule);
+  position: relative;
+}
+.signal:last-child { border-right: none; }
+.signal .sig-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+}
+.signal .sig-led {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ink-4);
+  flex-shrink: 0;
+}
+.signal.bullish .sig-led { background: var(--up); box-shadow: 0 0 0 3px var(--up-bg); }
+.signal.bearish .sig-led { background: var(--down); box-shadow: 0 0 0 3px var(--down-bg); }
+.signal.neutral .sig-led { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-bg); }
+.signal .sig-tag {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+.signal.bullish .sig-tag { color: var(--up); }
+.signal.bearish .sig-tag { color: var(--down); }
+.signal.neutral .sig-tag { color: var(--warn); }
+.signal .sig-headline {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.signal .sig-detail {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+.signal .sig-detail b { color: var(--ink-2); }
+
+/* ─── KPI row ─────────────────────────────────────────────── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.kpi {
+  padding: 14px 18px;
+  border-right: 1px solid var(--rule);
+}
+.kpi:last-child { border-right: none; }
+.kpi .label {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.kpi .value {
+  display: flex; align-items: baseline; gap: 6px;
+}
+.kpi .value .big {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1;
+}
+.kpi .value .unit {
+  font-size: 10.5px; color: var(--ink-3);
+}
+.kpi .delta {
+  font-size: 10.5px;
+  margin-top: 6px;
+  display: flex; align-items: center; gap: 5px;
+}
+.kpi .delta .arrow { font-size: 9px; }
+.kpi .delta .label-sm { color: var(--ink-3); margin-left: 5px; }
+
+/* Spot price KPI is BIG (Tier 1) */
+.kpi.tier1 {
+  grid-column: span 2;
+  padding: 16px 22px;
+  background: linear-gradient(180deg, var(--panel) 0%, var(--bg) 60%);
+}
+.kpi.tier1 .big { font-size: 40px; }
+.kpi.tier1 .label { font-size: 10px; letter-spacing: 0.18em; }
+.kpi.tier1 .delta { font-size: 12.5px; margin-top: 10px; }
+
+/* ─── Big chart ─────────────────────────────────────────────── */
+.chart-wrap {
+  padding: 14px 18px 18px;
+  background: var(--bg);
+}
+.chart-frame {
+  height: 260px;
+  position: relative;
+}
+.chart-frame svg { display: block; width: 100%; height: 100%; }
+.range-bar {
+  display: flex; gap: 0;
+}
+.range-btn {
+  padding: 3px 11px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-family: var(--font-num);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid transparent;
+}
+.range-btn.active { color: var(--ink); border-bottom-color: var(--accent); }
+.range-btn:hover:not(.active) { color: var(--ink-2); }
+
+.ohlc-row {
+  display: flex;
+  border-bottom: 1px solid var(--rule);
+}
+.ohlc-cell {
+  padding: 8px 16px;
+  border-right: 1px solid var(--rule);
+  flex: 1;
+}
+.ohlc-cell:last-child { border-right: none; }
+.ohlc-cell .l {
+  font-size: 9px; letter-spacing: 0.12em; color: var(--ink-3);
+  text-transform: uppercase; font-weight: 600;
+  margin-bottom: 3px;
+}
+.ohlc-cell .v {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+}
+
+/* ─── Two-column row ─────────────────────────────────────── */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--rule);
+}
+.split > div + div { border-left: 1px solid var(--rule); }
+.split > div { display: flex; flex-direction: column; }
+
+/* ─── Traffic light coastline map ──────────────────────────── */
+.coast-wrap {
+  position: relative;
+  padding: 12px 18px 18px;
+  flex: 1;
+  display: flex; flex-direction: column;
+  gap: 12px;
+}
+.coast-svg {
+  flex: 1;
+  min-height: 280px;
+}
+.coast-svg svg { display: block; width: 100%; height: 100%; }
+.coast-legend {
+  display: flex; gap: 16px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+.coast-legend .li { display: inline-flex; align-items: center; gap: 5px; }
+.coast-legend .li .dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* ─── Equities table ───────────────────────────────────────── */
+.eq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.eq-table th {
+  text-align: right;
+  padding: 8px 12px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+  border-bottom: 1px solid var(--rule-2);
+  background: var(--panel-2);
+}
+.eq-table th:first-child { text-align: left; }
+.eq-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+}
+.eq-table td:first-child { text-align: left; }
+.eq-table tr:hover td { background: var(--bg-soft); }
+.eq-table td.name .n { color: var(--ink); font-weight: 500; }
+.eq-table td.name .t { color: var(--ink-3); font-size: 9.5px; letter-spacing: 0.04em; margin-top: 1px; }
+.eq-table td .pct-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.eq-table td .pct-pill.up { background: var(--up-bg); color: var(--up); }
+.eq-table td .pct-pill.down { background: var(--down-bg); color: var(--down); }
+
+/* ─── Bars (biomass) ───────────────────────────────────────── */
+.bars-wrap {
+  padding: 16px 18px 14px;
+}
+.bars {
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 130px;
+}
+.bar-stack {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.bar-stack .bars-pair {
+  display: flex; align-items: flex-end;
+  gap: 2px;
+  width: 100%;
+  height: 110px;
+}
+.bar-stack .bar {
+  flex: 1;
+  background: var(--accent);
+  min-height: 2px;
+}
+.bar-stack .bar.b1 { opacity: 0.85; }
+.bar-stack .bar.b2 { opacity: 0.5; }
+.bar-stack .bar.future { opacity: 0.3; background: var(--ink-3); }
+.bar-stack .lbl { font-size: 9px; color: var(--ink-3); letter-spacing: 0.05em; }
+
+.bars-legend {
+  display: flex; gap: 14px;
+  margin-top: 12px;
+  font-size: 9.5px; color: var(--ink-3);
+}
+.bars-legend .li { display: inline-flex; align-items: center; gap: 5px; }
+.bars-legend .sw { width: 12px; height: 4px; }
+.bars-legend .sw.s1 { background: var(--accent); opacity: 0.85; }
+.bars-legend .sw.s2 { background: var(--accent); opacity: 0.5; }
+.bars-legend .sw.s3 { background: var(--ink-3); opacity: 0.3; }
+
+/* ─── Right panel ──────────────────────────────────────────── */
+.right {
+  grid-row: 3; grid-column: 3;
+  background: var(--panel);
+  border-left: 1px solid var(--rule);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.insights {
+  border-bottom: 1px solid var(--rule);
+}
+.insights-head {
+  padding: 11px 16px 7px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+}
+.insight {
+  padding: 10px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent);
+}
+.insight:last-child { border-bottom: none; }
+.insight .ihead {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 4px;
+}
+.insight .itag {
+  font-size: 8.5px; letter-spacing: 0.12em;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius);
+}
+.insight.bullish .itag { background: var(--up-bg); color: var(--up); }
+.insight.bearish .itag { background: var(--down-bg); color: var(--down); }
+.insight.neutral .itag { background: var(--warn-bg); color: var(--warn); }
+.insight .ititle {
+  font-size: 11.5px; color: var(--ink);
+  font-weight: 600; line-height: 1.35;
+}
+.insight .idesc {
+  font-size: 10.5px; color: var(--ink-3);
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.news-section { flex: 1; }
+.news-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 16px 7px;
+}
+.news-head .lbl {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+}
+.news-head .ct {
+  font-size: 9.5px; color: var(--ink-3);
+  font-family: var(--font-num);
+}
+.news-filters {
+  display: flex; gap: 4px;
+  padding: 2px 16px 8px;
+  flex-wrap: wrap;
+}
+.news-chip {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.news-chip.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.news-item {
+  padding: 10px 16px;
+  border-top: 1px solid var(--rule);
+  cursor: pointer;
+}
+.news-item:hover { background: var(--bg-soft); }
+.news-meta {
+  display: flex; justify-content: space-between;
+  font-size: 9px;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.news-hl {
+  font-size: 11.5px;
+  color: var(--ink);
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.news-tag {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ─── Status bar ───────────────────────────────────────────── */
+.status {
+  grid-row: 4; grid-column: 1 / 4;
+  display: flex; align-items: center; gap: 18px;
+  padding: 0 18px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--rule-2);
+  font-size: 10px;
+  color: var(--ink-3);
+}
+.status .it { display: inline-flex; align-items: center; gap: 6px; }
+.status .it .k { letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
+.status .it .v { color: var(--ink); font-family: var(--font-num); }
+.status .grow { flex: 1; }
+
+/* ─── Tweaks panel ─────────────────────────────────────────── */
+.tweaks-panel {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 340px;
+  background: var(--panel);
+  border-left: 1px solid var(--rule-2);
+  box-shadow: -8px 0 30px rgba(0,0,0,0.08);
+  z-index: 60;
+  transform: translateX(100%);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex; flex-direction: column;
+}
+.tweaks-panel.open { transform: translateX(0); }
+.tweaks-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.tweaks-head .ttl {
+  font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.tweaks-head .x {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink-3);
+  font-size: 16px;
+}
+.tweaks-body {
+  flex: 1; overflow-y: auto;
+  padding: 8px 18px 24px;
+}
+.tw-group { padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, var(--rule) 50%, transparent); }
+.tw-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
+.tw-opts { display: grid; gap: 4px; }
+.tw-opt {
+  padding: 6px 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-2);
+  text-align: left;
+}
+.tw-opt:hover { border-color: var(--rule-2); }
+.tw-opt.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.tw-slider { display: flex; align-items: center; gap: 10px; }
+.tw-slider input[type="range"] { flex: 1; }
+.tw-slider .v { font-size: 11px; color: var(--ink); font-family: var(--font-num); min-width: 36px; text-align: right; }
+
+/* ─── Tweaks FAB ───────────────────────────────────────────── */
+.tweaks-fab {
+  position: fixed;
+  right: 18px; bottom: 36px;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+}
+.tweaks-fab[hidden] { display: none; }
+
+/* ─── Shipping placeholder cards ───────────────────────────── */
+.ship-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--rule);
+}
+.ship-card {
+  padding: 16px 18px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.ship-card:nth-child(2n) { border-right: none; }
+.ship-card .ttl {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.ship-card .ttl .api {
+  font-size: 8px; letter-spacing: 0.12em;
+  background: var(--warn-bg); color: var(--warn);
+  padding: 1px 6px; border-radius: var(--radius);
+  font-weight: 600;
+}
+.ship-card .pv {
+  display: flex; align-items: baseline; gap: 6px;
+  margin-bottom: 4px;
+}
+.ship-card .pv .big {
+  font-size: 30px; font-weight: 600; color: var(--ink);
+  letter-spacing: -0.01em; line-height: 1;
+}
+.ship-card .pv .u {
+  font-size: 10.5px; color: var(--ink-3);
+}
+.ship-card .pv .d {
+  margin-left: auto;
+  font-size: 11px;
+}
+.ship-card .desc {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.ship-card .mini-spark {
+  margin-top: 10px;
+  height: 36px;
+}
+
+/* ─── Cmd palette ─────────────────────────────────────────── */
+.cmdk-overlay {
+  position: fixed; inset: 0;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: none;
+  align-items: flex-start; justify-content: center;
+  padding-top: 14vh;
+}
+.cmdk-overlay.open { display: flex; }
+.cmdk {
+  width: 560px;
+  max-width: 92vw;
+  background: var(--panel);
+  border: 1px solid var(--rule-2);
+  border-radius: 6px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.cmdk input {
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  background: transparent;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  outline: none;
+}
+.cmdk-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+.cmdk-item {
+  padding: 9px 20px;
+  cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 40%, transparent);
+}
+.cmdk-item .lbl { color: var(--ink); }
+.cmdk-item .hint { font-size: 9.5px; letter-spacing: 0.06em; color: var(--ink-3); }
+.cmdk-item.sel { background: var(--bg-soft); }
+
+/* ─── Mobile guard ─────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 200px 1fr 280px; }
+}
+
+/* Coast pin styles */
+.coast-pin { transition: r 120ms; }
+.coast-pin:hover { r: 6; }
+</style>
+</head>
+<body data-mode="terminal">
+
+<div class="shell">
+
+  <!-- ─── Top bar ─── -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="sigil">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="12" cy="12" r="9.5"/>
+          <path d="M12 3 L14.2 11.8 L12 14 L9.8 11.8 Z" fill="currentColor" stroke="none"/>
+          <path d="M12 21 L9.8 12.2 L12 10 L14.2 12.2 Z" fill="currentColor" opacity="0.35" stroke="none"/>
+        </svg>
+      </span>
+      <span class="word">NorthSea<span class="terminal">Terminal</span></span>
+    </div>
+
+    <nav class="industry-tabs" id="industry-tabs">
+      <button class="industry-tab active" data-tab="oil">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 C 8 9, 5 13, 5 16 a 7 7 0 0 0 14 0 C 19 13, 16 9, 12 2 Z"/></svg>
+        </span>
+        Oil &amp; Gas
+      </button>
+      <button class="industry-tab" data-tab="salmon">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 12 C 7 7, 14 7, 18 12 C 14 17, 7 17, 3 12 Z" fill="currentColor" opacity="0.85" stroke="none"/>
+            <path d="M18 12 L22 9 L22 15 Z" fill="currentColor" opacity="0.85" stroke="none"/>
+            <circle cx="6.5" cy="11" r="0.9" fill="var(--bg)" stroke="none"/>
+          </svg>
+        </span>
+        Salmon
+      </button>
+      <button class="industry-tab" data-tab="shipping">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 17 L21 17 L19 20 L5 20 Z" fill="currentColor" stroke="none" opacity="0.85"/>
+            <path d="M5 17 L5 11 L19 11 L19 17 Z" stroke="currentColor" fill="none"/>
+            <path d="M12 11 L12 5 L17 9 L12 9" stroke="currentColor" fill="none"/>
+          </svg>
+        </span>
+        Shipping
+      </button>
+    </nav>
+
+    <div class="topbar-spacer"></div>
+
+    <button class="cmdbar" id="cmdbar-trigger">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span>Type a ticker or command…</span>
+      <kbd>/</kbd>
+    </button>
+
+    <div class="mode-switch" id="mode-switch" role="tablist" aria-label="Visual mode">
+      <button data-mode="workspace" title="Light Workspace · daytime analysis"><span class="glyph workspace"></span>Workspace</button>
+      <button class="on" data-mode="terminal" title="Terminal · trading-desk default"><span class="glyph terminal"></span>Terminal</button>
+      <button data-mode="focus" title="Focus · monitoring, low-light"><span class="glyph focus"></span>Focus</button>
+    </div>
+
+    <div class="session-pill" id="session-pill">
+      <span class="dot"></span>
+      <span class="lbl" id="session-lbl">OSLO · OPEN</span>
+    </div>
+
+    <div class="clock">
+      <div class="t num" id="clock-t">--:--:--</div>
+      <div class="d" id="clock-d">--- -- ---</div>
+    </div>
+  </header>
+
+  <!-- ─── Macro strip ─── -->
+  <div class="strip">
+    <span class="live-dot">LIVE</span>
+    <div class="strip-track" id="strip-track"></div>
+  </div>
+
+  <!-- ─── Sidebar ─── -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- ─── Main ─── -->
+  <main class="main" id="main"></main>
+
+  <!-- ─── Right panel ─── -->
+  <aside class="right" id="right"></aside>
+
+  <!-- ─── Status bar ─── -->
+  <footer class="status">
+    <span class="it"><span class="k">SESSION</span><span class="v" id="sb-session">OPEN</span></span>
+    <span class="it"><span class="k">LATENCY</span><span class="v" id="sb-lat">128 ms</span></span>
+    <span class="it"><span class="k">REFRESH</span><span class="v" id="sb-refresh">60s</span></span>
+    <span class="grow"></span>
+    <span class="it"><span class="k">DATA</span><span class="v">YAHOO · EIA · NASDAQ · INTRAFISH</span></span>
+    <span class="it"><span class="k">© 2026</span><span class="v">NORTHSEA TERMINAL</span></span>
+  </footer>
+</div>
+
+<!-- ─── Tweaks FAB & panel ─── -->
+<button class="tweaks-fab" id="tweaks-fab" title="Tweaks">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<aside class="tweaks-panel" id="tweaks-panel">
+  <div class="tweaks-head">
+    <span class="ttl">Tweaks</span>
+    <button class="x" id="tweaks-close" title="Close">✕</button>
+  </div>
+  <div class="tweaks-body">
+
+    <div class="tw-group">
+      <div class="tw-label">Visual Mode</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr 1fr">
+        <button class="tw-opt" data-mode-opt="workspace">Workspace</button>
+        <button class="tw-opt active" data-mode-opt="terminal">Terminal</button>
+        <button class="tw-opt" data-mode-opt="focus">Focus</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Density</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr">
+        <button class="tw-opt active" data-density="comfortable">Comfortable</button>
+        <button class="tw-opt" data-density="compact">Compact</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Number Style</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr">
+        <button class="tw-opt active" data-num="tabular">Tabular</button>
+        <button class="tw-opt" data-num="proportional">Proportional</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Up / Down</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr">
+        <button class="tw-opt active" data-ud="classic">Green / Red</button>
+        <button class="tw-opt" data-ud="forest">Forest / Rust</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Chart Style</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr 1fr">
+        <button class="tw-opt active" data-chart="filled">Filled</button>
+        <button class="tw-opt" data-chart="line">Line</button>
+        <button class="tw-opt" data-chart="stepped">Stepped</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Salmon · Traffic Light Style</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr">
+        <button class="tw-opt active" data-tl="map">Coast Map</button>
+        <button class="tw-opt" data-tl="list">List View</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Salmon · Biomass Chart</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr">
+        <button class="tw-opt active" data-bio="bars">Bars</button>
+        <button class="tw-opt" data-bio="area">Area</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Signals · Verbosity</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr 1fr">
+        <button class="tw-opt" data-sig="off">Off</button>
+        <button class="tw-opt active" data-sig="brief">Brief</button>
+        <button class="tw-opt" data-sig="full">Full</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Inline Trend Tags</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr">
+        <button class="tw-opt active" data-tags="on">On</button>
+        <button class="tw-opt" data-tags="off">Off</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Refresh Interval</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr 1fr 1fr">
+        <button class="tw-opt" data-refresh="15">15s</button>
+        <button class="tw-opt" data-refresh="30">30s</button>
+        <button class="tw-opt active" data-refresh="60">60s</button>
+        <button class="tw-opt" data-refresh="300">5m</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Time Format</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr 1fr">
+        <button class="tw-opt active" data-time="24">24h</button>
+        <button class="tw-opt" data-time="12">12h</button>
+        <button class="tw-opt" data-time="utc">UTC</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Currency</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr">
+        <button class="tw-opt active" data-currency="nok">NOK</button>
+        <button class="tw-opt" data-currency="usd">USD</button>
+      </div>
+    </div>
+
+    <div class="tw-group">
+      <div class="tw-label">Quick Presets</div>
+      <div class="tw-opts" style="grid-template-columns: 1fr 1fr 1fr">
+        <button class="tw-opt" data-preset="workspace">Workspace</button>
+        <button class="tw-opt" data-preset="terminal">Terminal</button>
+        <button class="tw-opt" data-preset="focus">Focus</button>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- ─── Cmd palette ─── -->
+<div class="cmdk-overlay" id="cmdk-overlay">
+  <div class="cmdk">
+    <input id="cmdk-input" placeholder="Type a ticker, command, or industry…" autocomplete="off"/>
+    <div class="cmdk-list" id="cmdk-list"></div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   NorthSea Terminal — Unified
+   ════════════════════════════════════════════════════════════════════ */
+
+const state = {
+  industry: 'oil',
+  mode: (typeof localStorage !== 'undefined' && localStorage.getItem('nst-mode')) || 'terminal',
+  variant: 'editorial',
+  density: 'comfortable',
+  num: 'tabular',
+  ud: 'classic',
+  chart: 'filled',
+  tl: 'map',
+  bio: 'bars',
+  sig: 'brief',
+  tags: 'on',
+  refresh: 60,
+  timeFmt: '24',
+  currency: 'nok',
+  oilRange: '1M',
+  salmonRange: '1M',
+};
+
+/* ─── MOCK DATA ───────────────────────────────────────────── */
+const MOCK = {
+  // Oil & Gas
+  oil: {
+    spot: { brent: 84.32, wti: 80.18, gas: 2.84, nokusd: 10.78, eurusd: 1.082 },
+    chg:  { brent: +1.42, wti: +0.95, gas: -0.06, nokusd: -0.18, eurusd: +0.04 },
+    verdict: {
+      tone: 'bullish',
+      stance: 'MILDLY BULLISH',
+      headline: 'Tight inventories and OPEC+ discipline outweigh softer Chinese demand.',
+      reasons: [
+        { tone: 'up',   text: 'US crude stocks drew <b>2.8 mbbl</b> last week vs. consensus +0.5 — a real demand signal.' },
+        { tone: 'up',   text: 'OPEC+ compliance >100% with <b>4.5 mbpd</b> spare capacity held off-market.' },
+        { tone: 'down', text: 'China refinery runs <b>−3% y/y</b> in Shandong; EV penetration eating gasoline pool.' },
+      ],
+      meta: { conviction: 'MEDIUM', timeframe: '1–4 WEEKS', updated: '2 MIN AGO' },
+    },
+    range52w: { lo: 71.20, hi: 92.45, current: 84.32, ctx: 'Trading <b>62% through</b> the 52w range — closer to highs than lows. Up <b>+5.6%</b> from 1m ago.' },
+    primarySignal: {
+      tone: 'bullish', tag: 'BULLISH', impact: 'high',
+      headline: 'Inventory draw is the cleanest demand signal in months',
+      detail: 'US crude stocks fell <b>2.8 mbbl</b> w/w vs. consensus +0.5. Refinery utilization at <b>91%</b>. With OPEC+ holding cuts through Q3, the supply-demand gap supports prices into summer.',
+      action: 'WATCH: <b>EQNR · AKRBP</b> · Brent <b>$85</b> resistance',
+    },
+    macro: [
+      { k: 'OPEC+ PROD',   v: '40.7', u: 'mbpd',  d: '+0.2 m/m', up: true,  tag: 'Discipline holds' },
+      { k: 'US RIGS',      v: '486',  u: 'units', d: '−4 w/w',  up: false, tag: 'Slowing growth' },
+      { k: 'US INVENT.',   v: '440.1',u: 'mbbl',  d: '−2.8 w/w', up: true,  tag: 'Inventory draw' },
+      { k: 'GLOBAL DEMAND',v: '102.3',u: 'mbpd',  d: '+1.1 y/y', up: true,  tag: 'Above forecast' },
+      { k: 'NORWAY 10Y',   v: '3.62', u: '%',     d: '−2 bps',   up: true,  tag: 'Lower yields' },
+      { k: 'BREAKEVEN',    v: '38',   u: 'USD',   d: 'NCS avg',  up: null,  tag: 'Resilient' },
+    ],
+    equities: [
+      { name: 'Equinor',     ticker: 'EQNR',  last: 312.40, chg: +1.82, m1: +4.2, ytd: +8.4 },
+      { name: 'Aker BP',     ticker: 'AKRBP', last: 268.90, chg: -0.62, m1: -2.1, ytd: -5.2 },
+      { name: 'Vår Energi',  ticker: 'VAR',   last:  35.84, chg: +2.45, m1: +6.1, ytd: +14.0 },
+      { name: 'DNO',         ticker: 'DNO',   last:  10.78, chg: +0.85, m1: +1.4, ytd: +2.8 },
+      { name: 'BW Energy',   ticker: 'BWE',   last:  29.40, chg: -1.20, m1: -3.5, ytd: -8.1 },
+      { name: 'Pgs',         ticker: 'PGS',   last:   8.32, chg: +3.10, m1: +9.8, ytd: +18.4 },
+    ],
+    signals: [
+      { tone: 'bullish', tag: 'BULLISH', impact: 'high', headline: 'OPEC+ discipline intact', detail: 'Saudi compliance >100%. Russia exports trending lower. Spare capacity around <b>4.5 mbpd</b> remains the swing factor.' },
+      { tone: 'neutral', tag: 'WATCH',   impact: 'med',  headline: 'Rig count drop, slow but steady', detail: 'US rigs at <b>486</b> (−4 w/w). Suggests slower 2026 growth, but not yet a supply concern.' },
+      { tone: 'bearish', tag: 'BEARISH', impact: 'med',  headline: 'China demand soft', detail: 'Refinery runs in Shandong down <b>3% y/y</b>. EV penetration eating gasoline pool. Watch import data Friday.' },
+    ],
+    insights: [
+      { tone: 'bullish', tag: 'EQNR',  impact: 'high', title: 'Equinor: dividend safety strong',           desc: 'At Brent $80+, FCF covers dividend 2.4×. Buyback of <b>$6bn</b> for 2026 announced.', why: 'Reinforces EQNR as a yield anchor in NCS' },
+      { tone: 'neutral', tag: 'NCS',   impact: 'med',  title: 'Johan Sverdrup phase 3 first oil 2027',     desc: 'Plateau extension targets <b>755 kbpd</b>. Breakeven below $20/bbl.', why: 'Long-cycle volume tailwind for EQNR/AKRBP' },
+      { tone: 'bearish', tag: 'GAS',   impact: 'med',  title: 'EU LNG storage 92% full',                   desc: 'Mild winter capped withdrawals. TTF below €30/MWh into Q2.', why: 'Pressures upstream gas-weighted names' },
+    ],
+    news: [
+      { src: 'REUTERS',       t: '08:42', tag: 'OPEC',     h: 'OPEC+ keeps production cuts through Q3 amid demand uncertainty' },
+      { src: 'BLOOMBERG',     t: '07:15', tag: 'EQUINOR',  h: 'Equinor to invest $4bn in Bay du Nord field, targets 2030 first oil' },
+      { src: 'FT',            t: '06:30', tag: 'PRICES',   h: 'Brent crude tops $84 as Middle East tensions resurface' },
+      { src: 'EIA',           t: 'YDA',   tag: 'INVENT.',  h: 'US crude inventories drop 2.8 million barrels, beating forecasts' },
+      { src: 'OFFSHORE-MAG',  t: 'YDA',   tag: 'NCS',      h: 'Vår Energi greenlights Balder X subsea expansion' },
+      { src: 'PLATTS',        t: '2D',    tag: 'GAS',      h: 'European gas storage withdrawals slow as warm spell continues' },
+    ],
+  },
+
+  // Salmon
+  salmon: {
+    spot: { nasdaq: 112.45, fpFw: 98.30, region3: 108.20, region4: 115.60, eurnok: 11.742, usdnok: 9.27 },
+    chg:  { nasdaq: +2.10, fpFw: +0.46, region3: +1.74, region4: -0.77, eurnok: -0.26, usdnok: -0.75 },
+    verdict: {
+      tone: 'bullish',
+      stance: 'BULLISH',
+      headline: 'Spot near 5-week high; tight Q2 supply meets resilient global demand.',
+      reasons: [
+        { tone: 'up',   text: 'Nasdaq Salmon at <b>NOK 112.45/kg</b>, <b>+12% YTD</b>. Forward curve in mild contango.' },
+        { tone: 'down', text: 'PO 4 traffic light <b>red</b> — production cap reduction tightens regional supply ~6% over 24 months.' },
+        { tone: 'up',   text: 'Smolt releases <b>+4.1% y/y</b> point to better 2027 supply, easing long-term cost pressure.' },
+      ],
+      meta: { conviction: 'HIGH', timeframe: '4–8 WEEKS', updated: '4 MIN AGO' },
+    },
+    range52w: { lo: 82.0, hi: 118.0, current: 112.45, ctx: 'At <b>85% of 52w range</b> — near highs. Up <b>+9.4%</b> from 1m ago.' },
+    primarySignal: {
+      tone: 'bullish', tag: 'BULLISH', impact: 'high',
+      headline: 'PO 4 red light + tight supply = pricing power for Q2',
+      detail: 'Mortality and lice load force PO 4 into a <b>6% cap reduction</b>. Combined with peak-season demand, spot has run <b>+12% YTD</b>. Best-in-class operators (BAKKA, SALM) capture margin upside.',
+      action: 'WATCH: <b>BAKKA · SALM</b> · NOK <b>118</b> resistance',
+    },
+    kpis: [
+      { label: 'NASDAQ SALMON · SPOT', value: '112.45', unit: 'NOK/kg', delta: '+2.10% w/w', up: true, sub: '5w streak', tier: 1 },
+      { label: 'STANDING BIOMASS',     value: '745',    unit: 'k tonnes', delta: '+3.2% y/y',  up: true },
+      { label: 'MONTHLY HARVEST',      value: '91.4',   unit: 'k t GWT',  delta: '+7.5% y/y',  up: true },
+      { label: 'EST. SUPPLY 2026',     value: '1.62',   unit: 'M tonnes', delta: '+2.8% y/y',  up: true },
+    ],
+    equities: [
+      { name: 'Mowi',          ticker: 'MOWI',  last: 198.40, chg: +1.82, m1: +4.2, ytd: +12.8, costKg: 48.2, ebitKg: 22.5 },
+      { name: 'SalMar',        ticker: 'SALM',  last: 682.00, chg: +2.45, m1: +5.1, ytd: +18.3, costKg: 45.8, ebitKg: 26.1 },
+      { name: 'Lerøy',         ticker: 'LSG',   last:  52.30, chg: -0.63, m1: -1.8, ytd:  +8.4, costKg: 50.1, ebitKg: 19.8 },
+      { name: 'Bakkafrost',    ticker: 'BAKKA', last: 588.50, chg: +3.11, m1: +6.8, ytd: +22.1, costKg: 44.5, ebitKg: 28.3 },
+      { name: 'Grieg Seafood', ticker: 'GSF',   last:  68.90, chg: -1.20, m1: -3.2, ytd:  -4.5, costKg: 55.3, ebitKg: 14.2 },
+      { name: 'Norway Royal',  ticker: 'NRS',   last: 198.00, chg: +0.88, m1: +2.1, ytd:  +9.7, costKg: 47.0, ebitKg: 21.0 },
+    ],
+    biomass: [
+      { m: 'JAN', biomass: 720, harvest:  82, future: false },
+      { m: 'FEB', biomass: 695, harvest:  78, future: false },
+      { m: 'MAR', biomass: 710, harvest:  85, future: false },
+      { m: 'APR', biomass: 745, harvest:  91, future: false },
+      { m: 'MAY', biomass: 780, harvest:  95, future: true },
+      { m: 'JUN', biomass: 820, harvest: 102, future: true },
+      { m: 'JUL', biomass: 850, harvest: 108, future: true },
+      { m: 'AUG', biomass: 830, harvest: 115, future: true },
+      { m: 'SEP', biomass: 790, harvest: 110, future: true },
+      { m: 'OCT', biomass: 760, harvest:  98, future: true },
+      { m: 'NOV', biomass: 735, harvest:  88, future: true },
+      { m: 'DEC', biomass: 715, harvest:  80, future: true },
+    ],
+    // 13 production zones (PO 1–13). x,y in 0–100 viewBox.
+    zones: [
+      { id: 'PO 1',  name: 'Svenskegr.–Jæren',         x: 50, y: 90, status: 'green'  },
+      { id: 'PO 2',  name: 'Ryfylke',                   x: 44, y: 84, status: 'green'  },
+      { id: 'PO 3',  name: 'Karmøy–Sotra',              x: 39, y: 78, status: 'yellow' },
+      { id: 'PO 4',  name: 'Nordhordland–Stadt',        x: 36, y: 71, status: 'red'    },
+      { id: 'PO 5',  name: 'Stadt–Hustadvika',          x: 38, y: 64, status: 'green'  },
+      { id: 'PO 6',  name: 'Nordmøre–S-Trøndelag',      x: 43, y: 58, status: 'yellow' },
+      { id: 'PO 7',  name: 'Nord-Trøndelag',            x: 48, y: 52, status: 'green'  },
+      { id: 'PO 8',  name: 'Helgeland–Bodø',            x: 53, y: 44, status: 'green'  },
+      { id: 'PO 9',  name: 'Vestfjorden–Vesterålen',    x: 56, y: 36, status: 'yellow' },
+      { id: 'PO 10', name: 'Andøya–Senja',              x: 60, y: 28, status: 'green'  },
+      { id: 'PO 11', name: 'Kvaløya–Loppa',             x: 66, y: 20, status: 'green'  },
+      { id: 'PO 12', name: 'Vest-Finnmark',             x: 73, y: 14, status: 'green'  },
+      { id: 'PO 13', name: 'Øst-Finnmark',              x: 82, y: 10, status: 'green'  },
+    ],
+    bio_indicators: [
+      { label: 'Sea Lice',    v: '0.18', u: 'avg/fish', s: 'ok' },
+      { label: 'Temperature', v: '8.2',  u: '°C',       s: 'ok' },
+      { label: 'Mortality',   v: '1.4',  u: '%',        s: 'warn' },
+      { label: 'Feed Conv.',  v: '1.15', u: 'FCR',      s: 'ok' },
+    ],
+    benchmarks: [
+      { name: 'Nasdaq Salmon', v: '112.45' },
+      { name: 'Fish Pool FW',  v: '98.30'  },
+      { name: 'Smolt Index',   v: '42.7M'  },
+    ],
+    signals: [
+      { tone: 'neutral', tag: 'WATCH',   impact: 'high', headline: 'PO 4 traffic light goes red', detail: 'Mortality and lice load force production cap reduction. Supply impact <b>~6% regional</b> over 24 months.' },
+      { tone: 'bullish', tag: 'BULLISH', impact: 'med',  headline: 'Smolt releases at record', detail: 'YTD releases <b>218M smolt</b> (+4.1% y/y) signal stronger 2027 supply. Forward curve in mild contango.' },
+      { tone: 'neutral', tag: 'WATCH',   impact: 'low',  headline: 'Feed costs stable, FCR improving', detail: 'Industry FCR at <b>1.15</b>, near best-in-class. Feed inflation moderating with soy/wheat softness.' },
+    ],
+    insights: [
+      { tone: 'bullish', tag: 'BAKKA', impact: 'high', title: 'Bakkafrost: best-in-class margins', desc: 'EBIT/kg at <b>NOK 28.3</b>, costs <b>NOK 44.5/kg</b>. Faroese geography insulates from PO traffic light.', why: 'Premium operator, defensible margin' },
+      { tone: 'neutral', tag: 'POLICY', impact: 'med', title: 'New PO traffic light review Q3', desc: 'Fiskeridir hints at tighter sea-lice thresholds. Could reduce 2027 MAB <b>1–2%</b>.', why: 'Sets up 2027 supply tightness' },
+      { tone: 'bearish', tag: 'GSF',   impact: 'med', title: 'Grieg margin under pressure', desc: 'Cost/kg at <b>NOK 55.3</b>, well above peers. Mortality issues in BC operations weigh on outlook.', why: 'Avoid until BC stabilises' },
+    ],
+    news: [
+      { src: 'INTRAFISH',     t: '08:42', tag: 'HARVEST',    h: 'Mowi reports record Q1 harvest volumes in Northern Norway' },
+      { src: 'UNDERCURRENT',  t: '07:15', tag: 'REGULATION', h: 'Sea lice levels force PO4 into production cap reduction' },
+      { src: 'SALMONBUSINESS',t: '06:30', tag: 'OFFSHORE',   h: 'SalMar Ocean Farm expansion receives final permits' },
+      { src: 'FISKERIDIR',    t: 'YDA',   tag: 'POLICY',     h: 'Updated traffic light assessments signal tighter regulations ahead' },
+      { src: 'INTRAFISH',     t: 'YDA',   tag: 'DEMAND',     h: 'Global salmon demand hits new peak as Asian markets expand' },
+      { src: 'ILAKS',         t: '2D',    tag: 'SUPPLY',     h: 'Record smolt releases expected to boost 2027 supply forecasts' },
+      { src: 'NASDAQ',        t: '2D',    tag: 'MARKETS',    h: 'Salmon futures curve shifts into contango amid supply concerns' },
+    ],
+  },
+
+  // Shipping (placeholder)
+  shipping: {
+    spot: { bdi: 1842, vlcc: 38500, suez: 41200, lng: 86000, eurusd: 1.082, usdnok: 10.78 },
+    chg:  { bdi: +2.4, vlcc: +1.8, suez: +0.9, lng: -1.2, eurusd: +0.04, usdnok: -0.18 },
+    verdict: {
+      tone: 'bullish',
+      stance: 'BULLISH · TANKERS LEAD',
+      headline: 'Tonne-mile demand on Russia & Red Sea reroutes; orderbook stays thin.',
+      reasons: [
+        { tone: 'up',   text: 'Tanker orderbook at <b>~10% of fleet</b>, lowest in two decades.' },
+        { tone: 'up',   text: 'Container Cape route extension keeps trans-Pacific firm; SCFI <b>+5.1% w/w</b>.' },
+        { tone: 'down', text: 'LNG fleet additions outpace demand for 2027+; spark <b>−1.2% w/w</b>.' },
+      ],
+      meta: { conviction: 'MEDIUM', timeframe: '2–6 MONTHS', updated: 'API · WIP' },
+    },
+    range52w: { lo: 1420, hi: 2150, current: 1842, ctx: 'BDI in mid-upper band of 52w range. Up <b>+8.2%</b> from 1m ago.' },
+    primarySignal: {
+      tone: 'bullish', tag: 'BULLISH', impact: 'high',
+      headline: 'VLCC rates jump on China summer stockpiling',
+      detail: 'AG-China firmed to <b>$38,500/day</b> as China stockpiles ahead of summer driving. Tonne-miles up <b>+12% y/y</b> on Russia/Red Sea reroutes.',
+      action: 'WATCH: <b>FRO · BWLPG</b> · BDI <b>1,900</b> resistance',
+    },
+    cards: [
+      { ttl: 'BALTIC DRY INDEX',  big: '1,842', u: 'pts',     d: '+2.4% w/w', up: true,  desc: 'Capesize spot leads on iron ore demand recovery.' },
+      { ttl: 'VLCC TD3C',         big: '38,500',u: '$/day',   d: '+1.8% w/w', up: true,  desc: 'AG-China rates firm ahead of summer driving season.' },
+      { ttl: 'SUEZMAX TD20',      big: '41,200',u: '$/day',   d: '+0.9% w/w', up: true,  desc: 'West Africa-UKC trade tight, sanctions push tonne-miles.' },
+      { ttl: 'LNG SPARK 174K',    big: '86,000',u: '$/day',   d: '−1.2% w/w', up: false, desc: 'European storage 92% full caps near-term demand.' },
+      { ttl: 'CONTAINER (SCFI)',  big: '1,512', u: 'pts',     d: '+5.1% w/w', up: true,  desc: 'Red Sea diversions sustain elevated trans-Pacific.' },
+      { ttl: 'CLEAN PRODUCT MR',  big: '24,800',u: '$/day',   d: '−0.8% w/w', up: false, desc: 'Atlantic basin softens on refinery turnarounds.' },
+    ],
+    equities: [
+      { name: 'Frontline',     ticker: 'FRO',   last: 218.50, chg: +2.10, m1: +4.5, ytd: +12.4 },
+      { name: 'Flex LNG',      ticker: 'FLNG',  last: 312.40, chg: -0.85, m1: -2.1, ytd: -3.8 },
+      { name: 'Stolt-Nielsen', ticker: 'SNI',   last: 412.00, chg: +1.20, m1: +3.2, ytd: +9.1 },
+      { name: 'Wallenius W.',  ticker: 'WAWI',  last:  98.40, chg: +0.45, m1: +1.8, ytd: +5.6 },
+      { name: 'BW LPG',        ticker: 'BWLPG', last: 162.80, chg: +1.95, m1: +5.4, ytd: +14.2 },
+      { name: 'Höegh Autoliners',ticker:'HAUTO',last: 118.20, chg: +0.85, m1: +2.4, ytd: +7.8 },
+    ],
+    insights: [
+      { tone: 'bullish', tag: 'TANKERS', impact: 'high', title: 'Tanker market structurally tight', desc: 'Orderbook only <b>10% of fleet</b>. Tonne-miles up on Russia/Red Sea reroutes.', why: 'Multi-year supply discipline' },
+      { tone: 'neutral', tag: 'LNG',     impact: 'med',  title: 'LNG fleet growth ahead of demand', desc: '300+ vessels on order vs. 700 trading. Could pressure rates 2027+.', why: 'Caution on long-cycle LNG plays' },
+      { tone: 'bullish', tag: 'CAPE',    impact: 'med',  title: 'Capesize iron-ore demand recovery', desc: 'China steel mill margins improving, restocking cycle starting.', why: 'Dry bulk catch-up trade' },
+    ],
+    news: [
+      { src: 'TRADEWINDS',  t: '08:42', tag: 'TANKERS',  h: 'VLCC rates jump as China stockpiles ahead of summer' },
+      { src: 'LLOYD\'S',    t: '07:15', tag: 'LNG',      h: 'Flex LNG signs new long-term charter with Asian utility' },
+      { src: 'BLOOMBERG',   t: '06:30', tag: 'BDI',      h: 'Baltic Dry climbs above 1,800 on iron ore strength' },
+      { src: 'SPLASH',      t: 'YDA',   tag: 'RED SEA',  h: 'Container lines extend Cape route through Q3' },
+      { src: 'FT',          t: 'YDA',   tag: 'SANCTIONS',h: 'Shadow fleet grows as Russia oil exports adapt' },
+    ],
+  },
+};
+
+/* ─── Helpers ─────────────────────────────────────────────── */
+function fmt(n, d=2) {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtSigned(n, d=2) {
+  if (n === null || n === undefined) return '—';
+  const s = Number(n) >= 0 ? '+' : '';
+  return s + Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function el(tag, attrs = {}, children = []) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== null) e.setAttribute(k, v);
+  }
+  if (typeof children === 'string') e.textContent = children;
+  else if (Array.isArray(children)) {
+    for (const c of children) {
+      if (!c) continue;
+      e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+  }
+  return e;
+}
+function cssVar(n) { return getComputedStyle(document.body).getPropertyValue(n).trim(); }
+
+/* Generate seeded price series */
+function genSeries(seed, n=80, base=80, vol=2.5) {
+  let r = seed * 9999;
+  const rand = () => { r = (r * 16807) % 2147483647; return (r / 2147483647) - 0.5; };
+  const out = [];
+  let p = base;
+  for (let i = 0; i < n; i++) { p += rand() * vol + (Math.sin(i / 6) * 0.3); out.push(Math.max(base*0.7, Math.min(base*1.3, p))); }
+  return out;
+}
+
+/* ─── Strip ───────────────────────────────────────────────── */
+function renderStrip() {
+  const t = document.getElementById('strip-track');
+  t.innerHTML = '';
+  let cells;
+  if (state.industry === 'oil') {
+    const s = MOCK.oil.spot, c = MOCK.oil.chg;
+    cells = [
+      { k: 'BRENT',   v: '$' + fmt(s.brent, 2),  d: fmtSigned(c.brent, 2) + '%', up: c.brent > 0 },
+      { k: 'WTI',     v: '$' + fmt(s.wti, 2),    d: fmtSigned(c.wti, 2)   + '%', up: c.wti > 0 },
+      { k: 'NAT GAS', v: '$' + fmt(s.gas, 2),    d: fmtSigned(c.gas, 2)   + '%', up: c.gas > 0 },
+      { k: 'USD/NOK', v: fmt(s.nokusd, 2),       d: fmtSigned(c.nokusd, 2) + '%',up: c.nokusd > 0 },
+      { k: 'EUR/USD', v: fmt(s.eurusd, 3),       d: fmtSigned(c.eurusd, 3) + '%',up: c.eurusd > 0 },
+    ];
+  } else if (state.industry === 'salmon') {
+    const s = MOCK.salmon.spot, c = MOCK.salmon.chg;
+    cells = [
+      { k: 'NASDAQ SALM', v: fmt(s.nasdaq, 2),  d: fmtSigned(c.nasdaq, 2) + '%', up: c.nasdaq > 0 },
+      { k: 'FP FW',       v: fmt(s.fpFw, 2),    d: fmtSigned(c.fpFw, 2)   + '%', up: c.fpFw > 0 },
+      { k: 'REGION 3',    v: fmt(s.region3, 2), d: fmtSigned(c.region3, 2)+ '%', up: c.region3 > 0 },
+      { k: 'REGION 4',    v: fmt(s.region4, 2), d: fmtSigned(c.region4, 2)+ '%', up: c.region4 > 0 },
+      { k: 'EUR/NOK',     v: fmt(s.eurnok, 3),  d: fmtSigned(c.eurnok, 3) + '%', up: c.eurnok > 0 },
+      { k: 'USD/NOK',     v: fmt(s.usdnok, 2),  d: fmtSigned(c.usdnok, 2) + '%', up: c.usdnok > 0 },
+    ];
+  } else {
+    const s = MOCK.shipping.spot, c = MOCK.shipping.chg;
+    cells = [
+      { k: 'BDI',     v: fmt(s.bdi, 0),  d: fmtSigned(c.bdi, 1) + '%', up: c.bdi > 0 },
+      { k: 'VLCC',    v: '$' + fmt(s.vlcc, 0),  d: fmtSigned(c.vlcc, 1) + '%', up: c.vlcc > 0 },
+      { k: 'SUEZMAX', v: '$' + fmt(s.suez, 0),  d: fmtSigned(c.suez, 1) + '%', up: c.suez > 0 },
+      { k: 'LNG',     v: '$' + fmt(s.lng, 0),   d: fmtSigned(c.lng, 1)  + '%', up: c.lng > 0 },
+      { k: 'EUR/USD', v: fmt(s.eurusd, 3),      d: fmtSigned(c.eurusd, 3) + '%', up: c.eurusd > 0 },
+      { k: 'USD/NOK', v: fmt(s.usdnok, 2),      d: fmtSigned(c.usdnok, 2) + '%', up: c.usdnok > 0 },
+    ];
+  }
+  for (const c of cells) {
+    t.appendChild(el('div', { class: 'strip-cell num' }, [
+      el('span', { class: 'k' }, c.k),
+      el('span', { class: 'v' }, c.v),
+      el('span', { class: 'd ' + (c.up ? 'up' : 'down') }, c.d),
+    ]));
+  }
+}
+
+/* ─── Sidebar ────────────────────────────────────────────── */
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = '';
+
+  if (state.industry === 'oil') {
+    const eq = MOCK.oil.equities;
+    const fx = [
+      { p: 'USD / NOK', v: fmt(MOCK.oil.spot.nokusd, 2), pct: fmtSigned(MOCK.oil.chg.nokusd, 2)+'%', up: MOCK.oil.chg.nokusd>0 },
+      { p: 'EUR / USD', v: fmt(MOCK.oil.spot.eurusd, 3), pct: fmtSigned(MOCK.oil.chg.eurusd, 3)+'%', up: MOCK.oil.chg.eurusd>0 },
+    ];
+    sb.appendChild(buildSection('Watchlist · Oslo', eq.length, eq.map(c => buildEqRow(c))));
+    sb.appendChild(buildSection('FX', null, fx.map(f => buildFxRow(f))));
+    const macroSec = buildSection('Macro Snapshot', null, MOCK.oil.macro.slice(0,4).map(m => buildMacroRow(m)));
+    macroSec.classList.add('minor');
+    sb.appendChild(macroSec);
+  } else if (state.industry === 'salmon') {
+    const eq = MOCK.salmon.equities;
+    sb.appendChild(buildSection('Watchlist · Oslo', eq.length, eq.map(c => buildEqRow(c))));
+    sb.appendChild(buildSection('Benchmarks', null, MOCK.salmon.benchmarks.map(b =>
+      el('div', { class: 'sb-row' }, [
+        el('span', { class: 'name' }, b.name),
+        el('span', { class: 'v num' }, b.v),
+      ])
+    )));
+    sb.appendChild(buildSection('Bio Indicators', null, MOCK.salmon.bio_indicators.map(b =>
+      el('div', { class: 'sb-row' }, [
+        el('span', { class: 'name' }, b.label),
+        el('span', { class: 'v bio-pill' }, [
+          el('span', { class: 'num' }, b.v),
+          el('span', { html: '<span style="color:var(--ink-3);font-size:9.5px;margin-left:4px">'+b.u+'</span>' }),
+          el('span', { class: 'led ' + b.s }),
+        ]),
+      ])
+    )));
+  } else {
+    const eq = MOCK.shipping.equities;
+    sb.appendChild(buildSection('Watchlist · Oslo', eq.length, eq.map(c => buildEqRow(c))));
+    sb.appendChild(buildSection('Routes', null, [
+      buildKvRow('AG → China', '+1.8%', true),
+      buildKvRow('WAF → UKC',  '+0.9%', true),
+      buildKvRow('USG → Asia', '−0.4%', false),
+      buildKvRow('TPM Pacific','+5.1%', true),
+    ]));
+  }
+}
+function buildSection(title, count, rows) {
+  return el('div', { class: 'sb-section' }, [
+    el('div', { class: 'sb-head' }, [
+      el('span', {}, title),
+      count !== null ? el('span', { class: 'count' }, String(count)) : null,
+    ]),
+    ...rows
+  ]);
+}
+function buildEqRow(c) {
+  return el('div', { class: 'sb-row' }, [
+    el('div', {}, [
+      el('div', { class: 'name' }, c.name),
+      el('div', { class: 'ticker num' }, c.ticker),
+    ]),
+    el('div', { class: 'v num ' + (c.chg >= 0 ? 'up' : 'down') }, fmtSigned(c.chg, 2) + '%'),
+  ]);
+}
+function buildFxRow(f) {
+  return el('div', { class: 'sb-row' }, [
+    el('span', { class: 'name' }, f.p),
+    el('div', {}, [
+      el('div', { class: 'v num' }, f.v),
+      el('div', { class: 'secondary num ' + (f.up ? 'up' : 'down') }, f.pct),
+    ]),
+  ]);
+}
+function buildMacroRow(m) {
+  return el('div', { class: 'sb-row' }, [
+    el('span', { class: 'name' }, m.k),
+    el('div', { class: 'v num' }, [
+      el('span', {}, m.v),
+      el('span', { html: '<span style="color:var(--ink-3);font-size:9.5px;margin-left:4px">'+m.u+'</span>' }),
+    ]),
+  ]);
+}
+function buildKvRow(k, v, up) {
+  return el('div', { class: 'sb-row' }, [
+    el('span', { class: 'name' }, k),
+    el('span', { class: 'v num ' + (up ? 'up' : 'down') }, v),
+  ]);
+}
+
+/* ─── Right panel ────────────────────────────────────────── */
+function renderRight() {
+  const r = document.getElementById('right');
+  r.innerHTML = '';
+
+  const data = MOCK[state.industry];
+
+  // Insights
+  const insBlock = el('div', { class: 'insights' }, [
+    el('div', { class: 'insights-head' }, 'Key Insights · Why It Matters'),
+    ...data.insights.map(i => el('div', { class: 'insight ' + i.tone + ' ' + (i.impact || 'med') }, [
+      el('div', { class: 'ihead' }, [
+        el('span', { class: 'itag' }, i.tag),
+        el('span', { class: 'iimpact', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
+      ]),
+      el('div', { class: 'ititle' }, i.title),
+      el('div', { class: 'idesc', html: i.desc }),
+      i.why ? el('div', { class: 'iwhy' }, i.why) : null,
+    ])),
+  ]);
+  r.appendChild(insBlock);
+
+  // News
+  const news = data.news;
+  const filters = ['ALL', ...Array.from(new Set(news.map(n => n.tag)))].slice(0, 6);
+  const newsSec = el('div', { class: 'news-section' }, [
+    el('div', { class: 'news-head' }, [
+      el('span', { class: 'lbl' }, 'News · ' + state.industry.charAt(0).toUpperCase() + state.industry.slice(1)),
+      el('span', { class: 'ct num' }, news.length + ' items'),
+    ]),
+    el('div', { class: 'news-filters' }, filters.map((f, i) => el('button', {
+      class: 'news-chip' + (i === 0 ? ' active' : ''),
+    }, f))),
+    ...news.map(n => el('div', { class: 'news-item' }, [
+      el('div', { class: 'news-meta' }, [
+        el('span', {}, n.src),
+        el('span', { class: 'num' }, n.t),
+      ]),
+      el('div', { class: 'news-hl' }, n.h),
+      el('div', { class: 'news-tag' }, n.tag),
+    ])),
+  ]);
+  r.appendChild(newsSec);
+}
+
+/* ─── Main: per-industry ────────────────────────────────── */
+function renderMain() {
+  const m = document.getElementById('main');
+  m.innerHTML = '';
+  if (state.industry === 'oil')      renderOil(m);
+  else if (state.industry === 'salmon') renderSalmon(m);
+  else                                renderShipping(m);
+}
+
+/* ─── OIL VIEW ─────────────────────────────────────────── */
+function renderOil(m) {
+  const oil = MOCK.oil;
+
+  // ── Verdict hero (top) ──
+  m.appendChild(buildVerdict(oil.verdict, {
+    industryLabel: 'OIL & GAS',
+    label: 'BRENT · SPOT',
+    value: '$' + fmt(oil.spot.brent, 2),
+    unit: '/bbl',
+    delta: fmtSigned(oil.chg.brent, 2) + '% w/w',
+    up: oil.chg.brent > 0,
+    range52w: oil.range52w,
+  }));
+
+  // ── Signals: 1 primary + 3 secondaries ──
+  if (state.sig !== 'off') {
+    m.appendChild(buildSignalStack(oil.primarySignal, oil.signals));
+  }
+
+  // ── Secondary KPIs + chart ──
+  const heroPanel = el('div', { class: 'panel' });
+  heroPanel.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>Brent Crude</b> · ICE · USD/bbl' }),
+    el('div', { class: 'aux' }, [
+      buildRange(['1W','1M','3M','6M','1Y'], state.oilRange, (r) => { state.oilRange = r; renderMain(); }),
+    ]),
+  ]));
+  const ki = el('div', { class: 'kpi-row' });
+  ki.style.gridTemplateColumns = 'repeat(3, 1fr)';
+  ki.appendChild(buildKpi({ label: 'WTI · SPOT',    value: '$'+fmt(oil.spot.wti,2),   unit: '/bbl', delta: fmtSigned(oil.chg.wti,2)+'%', up: oil.chg.wti>0 }));
+  ki.appendChild(buildKpi({ label: 'NAT GAS',       value: '$'+fmt(oil.spot.gas,2),   unit: '/MMBtu', delta: fmtSigned(oil.chg.gas,2)+'%', up: oil.chg.gas>0 }));
+  ki.appendChild(buildKpi({ label: 'USD / NOK',     value: fmt(oil.spot.nokusd,2),    unit: '', delta: fmtSigned(oil.chg.nokusd,2)+'%', up: oil.chg.nokusd>0 }));
+  heroPanel.appendChild(ki);
+
+  // OHLC
+  heroPanel.appendChild(el('div', { class: 'ohlc-row' }, [
+    buildOhlc('Open', '$82.90'),
+    buildOhlc('High', '$85.10'),
+    buildOhlc('Low',  '$82.45'),
+    buildOhlc('Range','2.65'),
+    buildOhlc('52w',  '$71–$92'),
+  ]));
+
+  // Chart
+  const series = genSeries(state.oilRange === '1W' ? 1 : state.oilRange === '1M' ? 2 : state.oilRange === '3M' ? 3 : state.oilRange === '6M' ? 4 : 5, 80, oil.spot.brent, 2.0);
+  heroPanel.appendChild(el('div', { class: 'chart-wrap' }, [
+    buildAreaChart(series, 280),
+  ]));
+  m.appendChild(heroPanel);
+
+  // Macro grid
+  const macroPanel = el('div', { class: 'panel' });
+  macroPanel.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>Oil Macro</b> · OPEC · Inventories · Demand' }),
+    el('div', { class: 'aux' }, 'EIA · OPEC · IEA'),
+  ]));
+  const mg = el('div', { class: 'kpi-row' });
+  // 2 rows of 3
+  mg.style.gridTemplateColumns = 'repeat(3, 1fr)';
+  for (const x of MOCK.oil.macro) {
+    mg.appendChild(buildKpi({ label: x.k, value: x.v, unit: x.u, delta: x.d, up: x.up, sub: x.tag }));
+  }
+  macroPanel.appendChild(mg);
+  m.appendChild(macroPanel);
+
+  // Equities table
+  m.appendChild(buildEqTable('Oil Equities · Oslo Børs', MOCK.oil.equities, ['NAME','LAST','CHG %','1M','YTD']));
+}
+
+/* ─── SALMON VIEW ─────────────────────────────────────── */
+function renderSalmon(m) {
+  const sl = MOCK.salmon;
+
+  // ── Verdict hero ──
+  m.appendChild(buildVerdict(sl.verdict, {
+    industryLabel: 'SALMON',
+    label: 'NASDAQ SALMON · SPOT',
+    value: fmt(sl.spot.nasdaq, 2),
+    unit: 'NOK/kg',
+    delta: fmtSigned(sl.chg.nasdaq, 2) + '% w/w',
+    up: sl.chg.nasdaq > 0,
+    range52w: sl.range52w,
+  }));
+
+  // ── Signals ──
+  if (state.sig !== 'off') {
+    m.appendChild(buildSignalStack(sl.primarySignal, sl.signals));
+  }
+
+  // Hero secondary KPIs + chart
+  const heroPanel = el('div', { class: 'panel' });
+  heroPanel.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>Nasdaq Salmon Index</b> · Spot · NOK/kg' }),
+    el('div', { class: 'aux' }, [
+      buildRange(['1W','1M','3M','6M','1Y'], state.salmonRange, (r)=>{state.salmonRange = r; renderMain();}),
+    ]),
+  ]));
+  const ki = el('div', { class: 'kpi-row' });
+  ki.style.gridTemplateColumns = 'repeat(3, 1fr)';
+  // skip the tier1 (now in verdict); show 3 supporting KPIs
+  for (const k of sl.kpis.slice(1)) ki.appendChild(buildKpi(k));
+  heroPanel.appendChild(ki);
+
+  // OHLC for spot price
+  heroPanel.appendChild(el('div', { class: 'ohlc-row' }, [
+    buildOhlc('Open', '109.20'),
+    buildOhlc('High', '118.40'),
+    buildOhlc('Low',  '96.50'),
+    buildOhlc('Range','21.90'),
+    buildOhlc('52w',  '82–118'),
+  ]));
+
+  const series = genSeries(state.salmonRange === '1W' ? 6 : 7, 80, sl.spot.nasdaq, 3.5);
+  heroPanel.appendChild(el('div', { class: 'chart-wrap' }, [
+    buildAreaChart(series, 260),
+  ]));
+  m.appendChild(heroPanel);
+
+  // Split: Biomass | Traffic light
+  const split = el('div', { class: 'split' });
+
+  // Biomass column
+  const bioCol = el('div');
+  bioCol.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>Biomass &amp; Harvest</b> · Norway · 2026' }),
+    el('div', { class: 'aux' }, 'k tonnes'),
+  ]));
+  bioCol.appendChild(buildBiomassChart(sl.biomass));
+  split.appendChild(bioCol);
+
+  // Traffic light column
+  const tlCol = el('div');
+  tlCol.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>Traffic Light System</b> · Production Zones' }),
+    el('div', { class: 'aux' }, 'Fiskeridir'),
+  ]));
+  if (state.tl === 'map') {
+    tlCol.appendChild(buildTrafficMap(sl.zones));
+  } else {
+    tlCol.appendChild(buildTrafficList(sl.zones));
+  }
+  split.appendChild(tlCol);
+
+  m.appendChild(split);
+
+  // Equities
+  m.appendChild(buildEqTable('Salmon Equities · Oslo Børs', sl.equities, ['NAME','LAST','CHG %','1M','YTD','COST/KG','EBIT/KG']));
+}
+
+/* ─── SHIPPING VIEW ─────────────────────────────────── */
+function renderShipping(m) {
+  const sh = MOCK.shipping;
+
+  // Verdict hero
+  m.appendChild(buildVerdict(sh.verdict, {
+    industryLabel: 'SHIPPING',
+    label: 'BALTIC DRY · BDI',
+    value: fmt(sh.spot.bdi, 0),
+    unit: 'pts',
+    delta: fmtSigned(sh.chg.bdi, 1) + '% w/w',
+    up: sh.chg.bdi > 0,
+    range52w: sh.range52w,
+  }));
+
+  // Signals
+  if (state.sig !== 'off') {
+    m.appendChild(buildSignalStack(sh.primarySignal, [
+      { tone: 'bullish', tag: 'TANKERS', impact: 'high', headline: 'VLCC rates +1.8% on China summer stockpiling' },
+      { tone: 'neutral', tag: 'CONTAINER', impact: 'med', headline: 'Red Sea reroutes extend through Q3' },
+      { tone: 'bearish', tag: 'LNG', impact: 'med', headline: 'European storage 92% full caps near-term LNG' },
+    ]));
+  }
+
+  // Banner
+  const banner = el('div', { class: 'panel' }, [
+    el('div', { class: 'panel-head' }, [
+      el('div', { class: 'title', html: '<b>Spot Rates</b> · Tankers · Dry Bulk · LNG' }),
+      el('div', { class: 'aux' }, [
+        el('span', { class: 'api-coming' }, 'API · COMING SOON'),
+        el('span', {}, 'Baltic Exchange · Clarksons'),
+      ]),
+    ]),
+  ]);
+  m.appendChild(banner);
+
+  // Card grid
+  const grid = el('div', { class: 'ship-grid' });
+  for (const c of MOCK.shipping.cards) {
+    const card = el('div', { class: 'ship-card' }, [
+      el('div', { class: 'ttl' }, [
+        el('span', {}, c.ttl),
+        el('span', { class: 'api' }, 'API · WIP'),
+      ]),
+      el('div', { class: 'pv' }, [
+        el('span', { class: 'big num' }, c.big),
+        el('span', { class: 'u' }, c.u),
+        el('span', { class: 'd num ' + (c.up ? 'up' : 'down') }, c.d),
+      ]),
+      el('div', { class: 'desc' }, c.desc),
+      el('div', { class: 'mini-spark', html: buildSparkSvg(genSeries(Math.random()*100, 30, 100, 4), c.up) }),
+    ]);
+    grid.appendChild(card);
+  }
+  m.appendChild(grid);
+
+  // Equities
+  m.appendChild(buildEqTable('Shipping Equities · Oslo Børs', MOCK.shipping.equities, ['NAME','LAST','CHG %','1M','YTD']));
+}
+
+/* ─── Reusable builders ───────────────────────────── */
+
+function buildVerdict(v, spot) {
+  // Range strip
+  const r = spot.range52w;
+  const pct = ((r.current - r.lo) / (r.hi - r.lo)) * 100;
+  const fillW = Math.min(95, Math.max(5, pct));
+  return el('div', { class: 'verdict ' + v.tone }, [
+    el('div', { class: 'vd-left' }, [
+      el('div', { class: 'vd-tag' }, [
+        el('span', { class: 'led' }),
+        el('span', {}, [document.createTextNode(spot.industryLabel + ' · ')]),
+        el('span', { class: 'stance' }, v.stance),
+      ]),
+      el('div', { class: 'vd-headline' }, v.headline),
+      el('div', { class: 'vd-reasons' }, v.reasons.map(rs =>
+        el('div', { class: 'vd-reason ' + rs.tone, html: rs.text })
+      )),
+      el('div', { class: 'vd-meta' }, [
+        el('span', { class: 'it' }, [el('span', {}, 'CONVICTION'), el('span', { class: 'v' }, v.meta.conviction)]),
+        el('span', { class: 'it' }, [el('span', {}, 'HORIZON'),    el('span', { class: 'v' }, v.meta.timeframe)]),
+        el('span', { class: 'it' }, [el('span', {}, 'UPDATED'),    el('span', { class: 'v' }, v.meta.updated)]),
+      ]),
+    ]),
+    el('div', { class: 'vd-right' }, [
+      el('div', { class: 'vd-spot-label' }, spot.label),
+      el('div', { class: 'vd-spot' }, [
+        el('span', { class: 'vp' }, spot.value),
+        el('span', { class: 'vu' }, spot.unit),
+        el('span', { class: 'vd ' + (spot.up ? 'up' : 'down') }, spot.delta),
+      ]),
+      el('div', { class: 'range-strip' }, [
+        el('div', { class: 'rs-bar', html:
+          '<div class="rs-fill" style="left:0;width:'+fillW+'%"></div>' +
+          '<div class="rs-pin" style="left:'+fillW+'%"></div>'
+        }),
+        el('div', { class: 'rs-labels' }, [
+          el('span', {}, fmt(r.lo, 2) + ' · 52w lo'),
+          el('span', { class: 'rs-here' }, fmt(r.current, 2)),
+          el('span', {}, fmt(r.hi, 2) + ' · 52w hi'),
+        ]),
+        el('div', { class: 'rs-context', html: r.ctx }),
+      ]),
+    ]),
+  ]);
+}
+
+function buildSignalStack(primary, secondaries) {
+  const stack = el('div', { class: 'panel' });
+  stack.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>Signals</b> · what to watch' }),
+    el('div', { class: 'aux' }, 'Updated 2 min ago'),
+  ]));
+  const grid = el('div', { class: 'signals-stack' });
+
+  // Primary
+  grid.appendChild(el('div', { class: 'signal-primary ' + primary.tone + ' ' + primary.impact }, [
+    el('div', { class: 'sp-row' }, [
+      el('span', { class: 'sp-led' }),
+      el('span', { class: 'sp-tag' }, primary.tag),
+      el('span', { class: 'sp-impact' }, [
+        el('span', { class: 'impact-bars', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
+        el('span', {}, (primary.impact || 'med').toUpperCase() + ' IMPACT'),
+      ]),
+    ]),
+    el('div', { class: 'sp-headline' }, primary.headline),
+    el('div', { class: 'sp-detail', html: primary.detail }),
+    primary.action ? el('div', { class: 'sp-action', html: primary.action }) : null,
+  ]));
+
+  // Secondaries
+  const secs = el('div', { class: 'signal-secondaries' });
+  for (const s of secondaries.slice(0, 3)) {
+    secs.appendChild(el('div', { class: 'signal-sec ' + s.tone + ' ' + (s.impact || 'med') }, [
+      el('span', { class: 'ss-led' }),
+      el('div', { class: 'ss-content' }, [
+        el('div', { class: 'ss-headline' }, s.headline),
+        el('div', { class: 'ss-meta' }, [
+          el('span', { class: 'ss-tag' }, s.tag),
+          el('span', {}, '· ' + (s.impact || 'med').toUpperCase()),
+        ]),
+      ]),
+      el('span', { class: 'ss-impact', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
+    ]));
+  }
+  grid.appendChild(secs);
+  stack.appendChild(grid);
+  return stack;
+}
+
+function buildSignals(signals) {
+  const p = el('div', { class: 'panel' });
+  p.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>Signals</b> · 30-second view' }),
+    el('div', { class: 'aux' }, 'Updated 2 min ago'),
+  ]));
+  const grid = el('div', { class: 'signals' });
+  for (const s of signals.slice(0, 4)) {
+    grid.appendChild(el('div', { class: 'signal ' + s.tone }, [
+      el('div', { class: 'sig-row' }, [
+        el('span', { class: 'sig-led' }),
+        el('span', { class: 'sig-tag' }, s.tag),
+      ]),
+      el('div', { class: 'sig-headline' }, s.headline),
+      state.sig === 'full' ? el('div', { class: 'sig-detail', html: s.detail }) : null,
+    ]));
+  }
+  p.appendChild(grid);
+  return p;
+}
+
+function buildKpi(k) {
+  return el('div', { class: 'kpi' + (k.tier === 1 ? ' tier1' : '') }, [
+    el('div', { class: 'label' }, k.label),
+    el('div', { class: 'value' }, [
+      el('span', { class: 'big num' }, k.value),
+      k.unit ? el('span', { class: 'unit' }, k.unit) : null,
+    ]),
+    el('div', { class: 'delta ' + (k.up === null ? '' : k.up ? 'up' : 'down') }, [
+      k.up !== null && k.up !== undefined ? el('span', { class: 'arrow' }, k.up ? '▲' : '▼') : null,
+      el('span', {}, k.delta || ''),
+      k.sub ? el('span', { class: 'label-sm' }, '· ' + k.sub) : null,
+    ]),
+  ]);
+}
+
+function buildOhlc(l, v) {
+  return el('div', { class: 'ohlc-cell' }, [
+    el('div', { class: 'l' }, l),
+    el('div', { class: 'v num' }, v),
+  ]);
+}
+
+function buildRange(opts, current, onClick) {
+  return el('div', { class: 'range-bar' }, opts.map(o => el('button', {
+    class: 'range-btn' + (o === current ? ' active' : ''),
+    onclick: () => onClick(o),
+  }, o)));
+}
+
+function buildAreaChart(values, height) {
+  const w = 800, h = height;
+  const min = Math.min(...values) * 0.98;
+  const max = Math.max(...values) * 1.02;
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = 60 + (i / (values.length - 1)) * (w - 80);
+    const y = 16 + (h - 56) - ((v - min) / range) * (h - 56);
+    return [x, y];
+  });
+  const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = line + ` L${pts[pts.length-1][0]},${h - 24} L${pts[0][0]},${h - 24} Z`;
+
+  const cstyle = state.chart;
+  const accent = cssVar('--accent');
+
+  // Y ticks
+  const yTicks = Array.from({ length: 5 }, (_, i) => {
+    const val = min + (range / 4) * i;
+    const y = 16 + (h - 56) - ((val - min) / range) * (h - 56);
+    return { val: val.toFixed(1), y };
+  });
+
+  return el('div', { class: 'chart-frame', html: `
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grd" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${accent}" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="${accent}" stop-opacity="0.01"/>
+        </linearGradient>
+      </defs>
+      ${yTicks.map(t => `
+        <line x1="60" y1="${t.y}" x2="${w-20}" y2="${t.y}" stroke="${cssVar('--rule')}" stroke-width="0.5"/>
+        <text x="52" y="${t.y+3}" text-anchor="end" fill="${cssVar('--ink-3')}" font-size="10" font-family="${cssVar('--font-num') || 'Inter Tight'}">${t.val}</text>
+      `).join('')}
+      ${cstyle === 'filled' ? `<path d="${area}" fill="url(#grd)"/>` : ''}
+      <path d="${line}" fill="none" stroke="${accent}" stroke-width="${cstyle === 'line' ? 1.4 : 1.7}" stroke-linejoin="round" />
+      <circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="3" fill="${accent}"/>
+    </svg>
+  `});
+}
+
+function buildBiomassChart(data) {
+  const wrap = el('div', { class: 'bars-wrap' });
+  if (state.bio === 'bars') {
+    const bars = el('div', { class: 'bars' });
+    const max = Math.max(...data.map(d => Math.max(d.biomass, d.harvest * 8)));
+    for (const d of data) {
+      const bH = (d.biomass / 850) * 110;
+      const hH = (d.harvest / 120) * 110;
+      bars.appendChild(el('div', { class: 'bar-stack' }, [
+        el('div', { class: 'bars-pair' }, [
+          el('div', { class: 'bar b1' + (d.future ? ' future' : ''), style: 'height:'+bH+'px' }),
+          el('div', { class: 'bar b2' + (d.future ? ' future' : ''), style: 'height:'+hH+'px' }),
+        ]),
+        el('div', { class: 'lbl' }, d.m),
+      ]));
+    }
+    wrap.appendChild(bars);
+  } else {
+    // area: biomass line
+    const series = data.map(d => d.biomass);
+    wrap.appendChild(buildAreaChart(series, 160));
+  }
+  wrap.appendChild(el('div', { class: 'bars-legend' }, [
+    el('span', { class: 'li' }, [el('span', { class: 'sw s1' }), el('span', {}, 'Biomass')]),
+    el('span', { class: 'li' }, [el('span', { class: 'sw s2' }), el('span', {}, 'Harvest')]),
+    el('span', { class: 'li' }, [el('span', { class: 'sw s3' }), el('span', {}, 'Forecast')]),
+  ]));
+  return wrap;
+}
+
+function buildTrafficMap(zones) {
+  // Simplified Norwegian coastline path (stylized, not geographic)
+  // viewBox 0 0 100 100
+  const coastPath = `
+    M 90,5 L 80,8 L 72,14 L 68,22 L 62,28 L 58,32
+    L 56,38 L 54,45 L 51,52 L 47,58 L 44,64
+    L 41,68 L 39,73 L 37,78 L 36,83 L 38,88
+    L 42,92 L 48,94 L 55,93 L 60,90 L 64,86
+  `;
+  const dots = zones.map(z => {
+    const col = z.status === 'green' ? cssVar('--up') : z.status === 'yellow' ? cssVar('--warn') : cssVar('--down');
+    return `
+      <g>
+        <circle class="coast-pin" cx="${z.x}" cy="${z.y}" r="2.4" fill="${col}" stroke="${cssVar('--bg')}" stroke-width="0.6">
+          <title>${z.id} · ${z.name} · ${z.status.toUpperCase()}</title>
+        </circle>
+        <text x="${z.x + 3.6}" y="${z.y + 1.2}" font-size="2.4" fill="${cssVar('--ink-2')}" font-family="${cssVar('--font-ui')}" font-weight="600">${z.id}</text>
+      </g>
+    `;
+  }).join('');
+
+  const svg = `
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">
+      <!-- water -->
+      <rect width="100" height="100" fill="${cssVar('--panel-2')}" opacity="0.35"/>
+      <!-- water grain -->
+      ${Array.from({length:8}, (_, i) => `<line x1="0" y1="${i*14+3}" x2="100" y2="${i*14+3}" stroke="${cssVar('--rule')}" stroke-width="0.15" stroke-dasharray="0.6,1.4"/>`).join('')}
+      <!-- coastline -->
+      <path d="${coastPath}" fill="none" stroke="${cssVar('--ink-3')}" stroke-width="1" stroke-linejoin="round"/>
+      <!-- compass -->
+      <g transform="translate(8,90)">
+        <circle cx="0" cy="0" r="3.5" fill="none" stroke="${cssVar('--ink-3')}" stroke-width="0.3"/>
+        <path d="M 0,-3.5 L 0.8,0 L 0,3.5 L -0.8,0 Z" fill="${cssVar('--ink-3')}"/>
+        <text x="0" y="-4.5" text-anchor="middle" font-size="2.2" fill="${cssVar('--ink-3')}" font-weight="700">N</text>
+      </g>
+      ${dots}
+    </svg>
+  `;
+  return el('div', { class: 'coast-wrap' }, [
+    el('div', { class: 'coast-svg', html: svg }),
+    el('div', { class: 'coast-legend' }, [
+      el('span', { class: 'li' }, [el('span', { class: 'dot', style: 'background: var(--up)' }), 'Green · Growth allowed']),
+      el('span', { class: 'li' }, [el('span', { class: 'dot', style: 'background: var(--warn)' }), 'Yellow · Stable']),
+      el('span', { class: 'li' }, [el('span', { class: 'dot', style: 'background: var(--down)' }), 'Red · Reduction']),
+    ]),
+  ]);
+}
+
+function buildTrafficList(zones) {
+  const wrap = el('div', { class: 'coast-wrap' });
+  const rows = zones.map(z => {
+    const col = z.status === 'green' ? 'up' : z.status === 'yellow' ? 'warn' : 'down';
+    return el('div', {
+      class: 'sb-row', style: 'padding: 7px 18px; border-bottom: 1px solid var(--rule)',
+    }, [
+      el('span', { html: `<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--${col})"></span><b style="font-weight:600;color:var(--ink)">${z.id}</b><span style="color:var(--ink-3);font-size:10.5px">${z.name}</span></span>` }),
+      el('span', { class: 'num', style: 'font-size: 9.5px; letter-spacing: 0.1em; color: var(--' + col + '); font-weight: 600' }, z.status.toUpperCase()),
+    ]);
+  });
+  for (const r of rows) wrap.appendChild(r);
+  return wrap;
+}
+
+function buildEqTable(title, rows, cols) {
+  const p = el('div', { class: 'panel' });
+  p.appendChild(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'title', html: '<b>' + title + '</b>' }),
+    el('div', { class: 'aux' }, rows.length + ' listed'),
+  ]));
+  const t = el('table', { class: 'eq-table' });
+  const thead = el('thead', {}, [
+    el('tr', {}, cols.map(c => el('th', {}, c)))
+  ]);
+  t.appendChild(thead);
+  const tbody = el('tbody');
+  for (const r of rows) {
+    const tr = el('tr');
+    tr.appendChild(el('td', { class: 'name' }, [
+      el('div', { class: 'n' }, r.name),
+      el('div', { class: 't' }, r.ticker + ' · OBX'),
+    ]));
+    tr.appendChild(el('td', { class: 'num' }, fmt(r.last, 2)));
+    tr.appendChild(el('td', {}, [
+      el('span', { class: 'pct-pill ' + (r.chg >= 0 ? 'up' : 'down') + ' num' }, fmtSigned(r.chg, 2) + '%'),
+    ]));
+    tr.appendChild(el('td', { class: 'num ' + (r.m1 >= 0 ? 'up' : 'down') }, fmtSigned(r.m1, 1) + '%'));
+    tr.appendChild(el('td', { class: 'num ' + (r.ytd >= 0 ? 'up' : 'down') }, fmtSigned(r.ytd, 1) + '%'));
+    if (cols.includes('COST/KG')) tr.appendChild(el('td', { class: 'num' }, fmt(r.costKg, 1)));
+    if (cols.includes('EBIT/KG')) tr.appendChild(el('td', { class: 'num ' + (r.ebitKg > 20 ? 'up' : 'warn') }, fmt(r.ebitKg, 1)));
+    tbody.appendChild(tr);
+  }
+  t.appendChild(tbody);
+  p.appendChild(t);
+  return p;
+}
+
+function buildSparkSvg(values, up) {
+  const w = 200, h = 36;
+  const min = Math.min(...values), max = Math.max(...values), range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 6) - 3;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const col = up ? cssVar('--up') : cssVar('--down');
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:100%">
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.4"/>
+  </svg>`;
+}
+
+/* ─── Tab switcher ─────────────────────────────────── */
+function setIndustry(ind) {
+  state.industry = ind;
+  document.querySelectorAll('.industry-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === ind));
+  // smooth transition: fade main+right
+  ['main', 'right', 'sidebar', 'strip-track'].forEach(id => {
+    const e = id === 'strip-track' ? document.getElementById(id) : document.getElementById(id);
+  });
+  renderAll();
+}
+
+function renderAll() {
+  renderStrip();
+  renderSidebar();
+  renderMain();
+  renderRight();
+}
+
+/* ─── Tweaks ──────────────────────────────────────── */
+function setMode(m) {
+  state.mode = m;
+  document.body.setAttribute('data-mode', m);
+  try { localStorage.setItem('nst-mode', m); } catch(e) {}
+  document.querySelectorAll('#mode-switch button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  document.querySelectorAll('[data-mode-opt]').forEach(b => b.classList.toggle('active', b.dataset.modeOpt === m));
+  // re-render to refresh inline svg colors that read css vars
+  setTimeout(renderAll, 0);
+}
+function setVariant(v) { setMode(v === 'editorial' ? 'workspace' : v === 'bloomberg' ? 'terminal' : v === 'highcontrast' ? 'focus' : v); }
+function setOpt(attr, val) {
+  state[attr] = val;
+  document.querySelectorAll(`[data-${attr}]`).forEach(b => b.classList.toggle('active', b.dataset[attr] === val));
+  if (['chart','tl','bio','sig'].includes(attr)) renderAll();
+  if (attr === 'tags' || attr === 'currency') renderAll();
+}
+function setNum(v) { state.num = v; document.body.setAttribute('data-num', v); markActive('num', v); }
+function setDensity(v) { state.density = v; document.body.setAttribute('data-density', v); markActive('density', v); }
+function setUd(v) { state.ud = v; document.body.setAttribute('data-ud', v); markActive('ud', v); applyUd(); renderAll(); }
+function setTime(v) { state.timeFmt = v; markActive('time', v); updateClock(); }
+function setRefresh(v) { state.refresh = +v; markActive('refresh', v); document.getElementById('sb-refresh').textContent = v + 's'; }
+function setCurrency(v) { state.currency = v; markActive('currency', v); }
+function applyPreset(p) {
+  if (p === 'editorial') { setMode('workspace'); setDensity('comfortable'); setOpt('chart','filled'); setOpt('tl','map'); }
+  else if (p === 'terminal') { setMode('terminal'); setDensity('compact'); setOpt('chart','filled'); setOpt('sig','full'); }
+  else if (p === 'minimal') { setMode('focus'); setDensity('comfortable'); setOpt('chart','line'); setOpt('sig','off'); setOpt('tags','off'); }
+  markActive('preset', p);
+}
+function applyUd() {
+  if (state.ud === 'forest') {
+    document.documentElement.style.setProperty('--up', '#3a6f1f');
+    document.documentElement.style.setProperty('--down', '#a04020');
+  } else {
+    document.documentElement.style.removeProperty('--up');
+    document.documentElement.style.removeProperty('--down');
+  }
+}
+function markActive(attr, v) {
+  document.querySelectorAll(`[data-${attr}]`).forEach(b => b.classList.toggle('active', b.dataset[attr] === String(v)));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Industry tabs
+  document.querySelectorAll('.industry-tab').forEach(b => {
+    if (!b.hasAttribute('disabled')) b.addEventListener('click', () => setIndustry(b.dataset.tab));
+  });
+  // Tweak listeners
+  document.querySelectorAll('[data-variant-opt]').forEach(b => b.addEventListener('click', () => setVariant(b.dataset.variantOpt)));
+  document.querySelectorAll('[data-mode-opt]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeOpt)));
+  document.querySelectorAll('#mode-switch button[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  // Apply persisted mode on load
+  setMode(state.mode);
+  document.querySelectorAll('[data-density]').forEach(b => b.addEventListener('click', () => setDensity(b.dataset.density)));
+  document.querySelectorAll('[data-num]').forEach(b => b.addEventListener('click', () => setNum(b.dataset.num)));
+  document.querySelectorAll('[data-ud]').forEach(b => b.addEventListener('click', () => setUd(b.dataset.ud)));
+  document.querySelectorAll('[data-chart]').forEach(b => b.addEventListener('click', () => setOpt('chart', b.dataset.chart)));
+  document.querySelectorAll('[data-tl]').forEach(b => b.addEventListener('click', () => setOpt('tl', b.dataset.tl)));
+  document.querySelectorAll('[data-bio]').forEach(b => b.addEventListener('click', () => setOpt('bio', b.dataset.bio)));
+  document.querySelectorAll('[data-sig]').forEach(b => b.addEventListener('click', () => setOpt('sig', b.dataset.sig)));
+  document.querySelectorAll('[data-tags]').forEach(b => b.addEventListener('click', () => setOpt('tags', b.dataset.tags)));
+  document.querySelectorAll('[data-refresh]').forEach(b => b.addEventListener('click', () => setRefresh(b.dataset.refresh)));
+  document.querySelectorAll('[data-time]').forEach(b => b.addEventListener('click', () => setTime(b.dataset.time)));
+  document.querySelectorAll('[data-currency]').forEach(b => b.addEventListener('click', () => setCurrency(b.dataset.currency)));
+  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => applyPreset(b.dataset.preset)));
+
+  // Tweaks panel toggle
+  const fab = document.getElementById('tweaks-fab');
+  const panel = document.getElementById('tweaks-panel');
+  const close = document.getElementById('tweaks-close');
+  fab.addEventListener('click', () => panel.classList.add('open'));
+  close.addEventListener('click', () => panel.classList.remove('open'));
+
+  // Host edit-mode protocol
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === '__activate_edit_mode') { panel.classList.add('open'); fab.style.display = 'none'; }
+    else if (d.type === '__deactivate_edit_mode') { panel.classList.remove('open'); fab.style.display = 'none'; }
+  });
+  try { window.parent.postMessage({type:'__edit_mode_available'}, '*'); } catch(e) {}
+
+  // Cmd palette
+  setupCmdK();
+
+  // Initial render
+  renderAll();
+  updateClock();
+  setInterval(updateClock, 1000);
+});
+
+/* ─── Clock ──────────────────────────────────────── */
+function updateClock() {
+  const now = new Date();
+  const ct = document.getElementById('clock-t');
+  const cd = document.getElementById('clock-d');
+  const sl = document.getElementById('session-lbl');
+  const sp = document.getElementById('session-pill');
+  const f = state.timeFmt;
+  if (f === '12') ct.textContent = now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+  else if (f === 'utc') ct.textContent = now.toISOString().slice(11,19) + ' UTC';
+  else ct.textContent = now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  cd.textContent = now.toLocaleDateString('en-GB', {weekday:'short',day:'2-digit',month:'short'}).toUpperCase();
+  // Session
+  const utcMin = now.getUTCHours()*60 + now.getUTCMinutes();
+  const open = utcMin >= 540 && utcMin <= 1200;
+  sp.classList.toggle('closed', !open);
+  sl.textContent = open ? 'OSLO · OPEN' : 'MARKETS · CLOSED';
+  document.getElementById('sb-session').textContent = open ? 'OPEN' : 'CLOSED';
+}
+
+/* ─── Cmd palette ────────────────────────────────── */
+function setupCmdK() {
+  const trig = document.getElementById('cmdbar-trigger');
+  const ov = document.getElementById('cmdk-overlay');
+  const inp = document.getElementById('cmdk-input');
+  const list = document.getElementById('cmdk-list');
+
+  const items = [
+    { lbl: 'Switch to Oil & Gas',  hint: 'OIL', a: () => setIndustry('oil') },
+    { lbl: 'Switch to Salmon',     hint: 'SAL', a: () => setIndustry('salmon') },
+    { lbl: 'Switch to Shipping',   hint: 'SHP', a: () => setIndustry('shipping') },
+    { lbl: 'Workspace mode (light)', hint: 'MODE', a: () => setMode('workspace') },
+    { lbl: 'Terminal mode (default)', hint: 'MODE', a: () => setMode('terminal') },
+    { lbl: 'Focus mode (low-light)',  hint: 'MODE', a: () => setMode('focus') },
+    { lbl: 'EQNR · Equinor',       hint: 'OIL',   a: () => setIndustry('oil') },
+    { lbl: 'AKRBP · Aker BP',      hint: 'OIL',   a: () => setIndustry('oil') },
+    { lbl: 'MOWI · Mowi',          hint: 'SAL',   a: () => setIndustry('salmon') },
+    { lbl: 'SALM · SalMar',        hint: 'SAL',   a: () => setIndustry('salmon') },
+    { lbl: 'BAKKA · Bakkafrost',   hint: 'SAL',   a: () => setIndustry('salmon') },
+    { lbl: 'FRO · Frontline',      hint: 'SHP',   a: () => setIndustry('shipping') },
+    { lbl: 'FLNG · Flex LNG',      hint: 'SHP',   a: () => setIndustry('shipping') },
+    { lbl: 'Open tweaks',          hint: 'UI',    a: () => document.getElementById('tweaks-panel').classList.add('open') },
+  ];
+  let sel = 0;
+  function renderList(q) {
+    list.innerHTML = '';
+    const filtered = items.filter(i => !q || i.lbl.toLowerCase().includes(q.toLowerCase()) || i.hint.toLowerCase().includes(q.toLowerCase()));
+    filtered.forEach((it, idx) => {
+      list.appendChild(el('div', {
+        class: 'cmdk-item' + (idx === sel ? ' sel' : ''),
+        onclick: () => { it.a(); close(); },
+      }, [
+        el('span', { class: 'lbl' }, it.lbl),
+        el('span', { class: 'hint' }, it.hint),
+      ]));
+    });
+    list._items = filtered;
+  }
+  function open() { ov.classList.add('open'); inp.value = ''; sel = 0; renderList(''); setTimeout(() => inp.focus(), 30); }
+  function close() { ov.classList.remove('open'); }
+  trig.addEventListener('click', open);
+  ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+  inp.addEventListener('input', () => { sel = 0; renderList(inp.value); });
+  inp.addEventListener('keydown', (e) => {
+    const items = list._items || [];
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowDown') { sel = Math.min(items.length - 1, sel + 1); renderList(inp.value); }
+    else if (e.key === 'ArrowUp')   { sel = Math.max(0, sel - 1); renderList(inp.value); }
+    else if (e.key === 'Enter')     { if (items[sel]) { items[sel].a(); close(); } }
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && !ov.classList.contains('open') && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault(); open();
+    }
+  });
+}
+</script>
+</body>
+</html>
