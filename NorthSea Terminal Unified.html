@@ -714,9 +714,19 @@ body {
   animation: pulse 1.6s ease-in-out infinite;
 }
 .strip-track {
-  display: flex; align-items: center; gap: 26px;
   flex: 1; min-width: 0;
   overflow: hidden;
+  position: relative;
+}
+.strip-ticker {
+  display: flex; align-items: center; gap: 40px;
+  width: max-content;
+  animation: ticker-scroll 40s linear infinite;
+}
+.strip-ticker:hover { animation-play-state: paused; }
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 .strip-cell {
   display: flex; align-items: baseline; gap: 7px;
@@ -1938,13 +1948,18 @@ function renderStrip() {
       { k: 'USD/NOK', v: fmt(s.usdnok, 2),      d: fmtSigned(c.usdnok, 2) + '%', up: c.usdnok > 0 },
     ];
   }
-  for (const c of cells) {
-    t.appendChild(el('div', { class: 'strip-cell num' }, [
-      el('span', { class: 'k' }, c.k),
-      el('span', { class: 'v' }, c.v),
-      el('span', { class: 'd ' + (c.up ? 'up' : 'down') }, c.d),
-    ]));
+  // Build cells twice so the scroll loops seamlessly
+  const ticker = el('div', { class: 'strip-ticker' });
+  for (let pass = 0; pass < 2; pass++) {
+    for (const c of cells) {
+      ticker.appendChild(el('div', { class: 'strip-cell num' }, [
+        el('span', { class: 'k' }, c.k),
+        el('span', { class: 'v' }, c.v),
+        el('span', { class: 'd ' + (c.up ? 'up' : 'down') }, c.d),
+      ]));
+    }
   }
+  t.appendChild(ticker);
 }
 
 /* ─── Sidebar ────────────────────────────────────────────── */
@@ -2822,9 +2837,16 @@ function updateClock() {
   else if (f === 'utc') ct.textContent = now.toISOString().slice(11,19) + ' UTC';
   else ct.textContent = now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   cd.textContent = now.toLocaleDateString('en-GB', {weekday:'short',day:'2-digit',month:'short'}).toUpperCase();
-  // Session
-  const utcMin = now.getUTCHours()*60 + now.getUTCMinutes();
-  const open = utcMin >= 540 && utcMin <= 1200;
+  // Session — Oslo Børs: Mon–Fri 09:00–16:30 Europe/Oslo
+  const osloParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Oslo', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now);
+  const osloWeekday = osloParts.find(p => p.type === 'weekday').value;
+  const osloHour    = parseInt(osloParts.find(p => p.type === 'hour').value);
+  const osloMin     = parseInt(osloParts.find(p => p.type === 'minute').value);
+  const osloTimeMin = osloHour * 60 + osloMin;
+  const isWeekday   = !['Sat', 'Sun'].includes(osloWeekday);
+  const open        = isWeekday && osloTimeMin >= 540 && osloTimeMin < 990; // 09:00–16:30
   sp.classList.toggle('closed', !open);
   sl.textContent = open ? 'OSLO · OPEN' : 'MARKETS · CLOSED';
   document.getElementById('sb-session').textContent = open ? 'OPEN' : 'CLOSED';
