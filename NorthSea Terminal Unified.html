@@ -1447,6 +1447,26 @@ body {
 .chart-tab:hover { color: var(--ink-2); }
 .chart-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+/* ─── Demo data notice ─────────────────────────────────────── */
+.demo-notice {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  background: var(--warn-soft);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--warn);
+  margin-bottom: 4px;
+}
+.demo-notice::before {
+  content: '!';
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+
 /* ─── News item click state ────────────────────────────────── */
 .news-item.has-url { cursor: pointer; }
 .news-item.has-url:hover .news-hl { color: var(--accent); }
@@ -1721,8 +1741,8 @@ const state = {
 const MOCK = {
   // Oil & Gas
   oil: {
-    spot: { brent: 84.32, wti: 80.18, gas: 2.84, nokusd: 10.78, eurusd: 1.082 },
-    chg:  { brent: +1.42, wti: +0.95, gas: -0.06, nokusd: -0.18, eurusd: +0.04 },
+    spot: { brent: 84.32, wti: 80.18, gas: 2.84, nokusd: 10.78, eurusd: null },
+    chg:  { brent: +1.42, wti: +0.95, gas: -0.06, nokusd: -0.18, eurusd: null },
     verdict: {
       tone: 'bullish',
       stance: 'MILDLY BULLISH',
@@ -1734,7 +1754,7 @@ const MOCK = {
       ],
       meta: { conviction: 'MEDIUM', timeframe: '1–4 WEEKS', updated: '2 MIN AGO' },
     },
-    range52w: { lo: 71.20, hi: 92.45, current: 84.32, ctx: 'Trading <b>62% through</b> the 52w range — closer to highs than lows. Up <b>+5.6%</b> from 1m ago.' },
+    range52w: { lo: null, hi: null, current: 84.32, ctx: null },
     primarySignal: {
       tone: 'bullish', tag: 'BULLISH', impact: 'high',
       headline: 'Inventory draw is the cleanest demand signal in months',
@@ -1743,19 +1763,19 @@ const MOCK = {
     },
     macro: [
       { k: 'OPEC+ PROD',   v: '40.7', u: 'mbpd',  d: '+0.2 m/m', up: true,  tag: 'Discipline holds' },
-      { k: 'US RIGS',      v: '486',  u: 'units', d: '−4 w/w',  up: false, tag: 'Slowing growth' },
+      { k: 'US RIGS',      v: null,   u: 'units', d: null,       up: null,  tag: 'Slowing growth' },
       { k: 'US INVENT.',   v: '440.1',u: 'mbbl',  d: '−2.8 w/w', up: true,  tag: 'Inventory draw' },
       { k: 'GLOBAL DEMAND',v: '102.3',u: 'mbpd',  d: '+1.1 y/y', up: true,  tag: 'Above forecast' },
-      { k: 'NORWAY 10Y',   v: '3.62', u: '%',     d: '−2 bps',   up: true,  tag: 'Lower yields' },
-      { k: 'BREAKEVEN',    v: '38',   u: 'USD',   d: 'NCS avg',  up: null,  tag: 'Resilient' },
+      { k: 'NORWAY 10Y',   v: null,   u: '%',     d: null,       up: null,  tag: 'Lower yields' },
+      { k: 'BREAKEVEN',    v: null,   u: 'USD',   d: null,       up: null,  tag: 'NCS avg' },
     ],
     equities: [
-      { name: 'Equinor',     ticker: 'EQNR',  last: 312.40, chg: +1.82, m1: +4.2, ytd: +8.4 },
-      { name: 'Aker BP',     ticker: 'AKRBP', last: 268.90, chg: -0.62, m1: -2.1, ytd: -5.2 },
-      { name: 'Vår Energi',  ticker: 'VAR',   last:  35.84, chg: +2.45, m1: +6.1, ytd: +14.0 },
-      { name: 'DNO',         ticker: 'DNO',   last:  10.78, chg: +0.85, m1: +1.4, ytd: +2.8 },
-      { name: 'BW Energy',   ticker: 'BWE',   last:  29.40, chg: -1.20, m1: -3.5, ytd: -8.1 },
-      { name: 'Pgs',         ticker: 'PGS',   last:   8.32, chg: +3.10, m1: +9.8, ytd: +18.4 },
+      { name: 'Equinor',     ticker: 'EQNR',  last: 312.40, chg: +1.82, m1: null, ytd: null },
+      { name: 'Aker BP',     ticker: 'AKRBP', last: 268.90, chg: -0.62, m1: null, ytd: null },
+      { name: 'Vår Energi',  ticker: 'VAR',   last:  35.84, chg: +2.45, m1: null, ytd: null },
+      { name: 'DNO',         ticker: 'DNO',   last:  10.78, chg: +0.85, m1: null, ytd: null },
+      { name: 'BW Energy',   ticker: 'BWE',   last:  29.40, chg: -1.20, m1: null, ytd: null },
+      { name: 'Pgs',         ticker: 'PGS',   last:   8.32, chg: +3.10, m1: null, ytd: null },
     ],
     signals: [
       { tone: 'bullish', tag: 'BULLISH', impact: 'high', headline: 'OPEC+ discipline intact', detail: 'Saudi compliance >100%. Russia exports trending lower. Spare capacity around <b>4.5 mbpd</b> remains the swing factor.' },
@@ -1779,8 +1799,8 @@ const MOCK = {
 
   // Salmon
   salmon: {
-    spot: { nasdaq: 112.45, fpFw: 98.30, region3: 108.20, region4: 115.60, eurnok: 11.742, usdnok: 9.27 },
-    chg:  { nasdaq: +2.10, fpFw: +0.46, region3: +1.74, region4: -0.77, eurnok: -0.26, usdnok: -0.75 },
+    spot: { nasdaq: null, fpFw: null, region3: null, region4: null, eurnok: null, usdnok: null },
+    chg:  { nasdaq: null, fpFw: null, region3: null, region4: null, eurnok: null, usdnok: null },
     verdict: {
       tone: 'bullish',
       stance: 'BULLISH',
@@ -1792,7 +1812,7 @@ const MOCK = {
       ],
       meta: { conviction: 'HIGH', timeframe: '4–8 WEEKS', updated: '4 MIN AGO' },
     },
-    range52w: { lo: 82.0, hi: 118.0, current: 112.45, ctx: 'At <b>85% of 52w range</b> — near highs. Up <b>+9.4%</b> from 1m ago.' },
+    range52w: { lo: null, hi: null, current: null, ctx: null },
     primarySignal: {
       tone: 'bullish', tag: 'BULLISH', impact: 'high',
       headline: 'PO 4 red light + tight supply = pricing power for Q2',
@@ -1800,18 +1820,18 @@ const MOCK = {
       action: 'WATCH: <b>BAKKA · SALM</b> · NOK <b>118</b> resistance',
     },
     kpis: [
-      { label: 'NASDAQ SALMON · SPOT', value: '112.45', unit: 'NOK/kg', delta: '+2.10% w/w', up: true, sub: '5w streak', tier: 1 },
-      { label: 'STANDING BIOMASS',     value: '745',    unit: 'k tonnes', delta: '+3.2% y/y',  up: true },
-      { label: 'MONTHLY HARVEST',      value: '91.4',   unit: 'k t GWT',  delta: '+7.5% y/y',  up: true },
-      { label: 'EST. SUPPLY 2026',     value: '1.62',   unit: 'M tonnes', delta: '+2.8% y/y',  up: true },
+      { label: 'NASDAQ SALMON · SPOT', value: null, unit: 'NOK/kg', delta: null, up: null, sub: null, tier: 1 },
+      { label: 'STANDING BIOMASS',     value: null, unit: 'k tonnes', delta: null, up: null },
+      { label: 'MONTHLY HARVEST',      value: null, unit: 'k t GWT',  delta: null, up: null },
+      { label: 'EST. SUPPLY 2026',     value: null, unit: 'M tonnes', delta: null, up: null },
     ],
     equities: [
-      { name: 'Mowi',          ticker: 'MOWI',  last: 198.40, chg: +1.82, m1: +4.2, ytd: +12.8, costKg: 48.2, ebitKg: 22.5 },
-      { name: 'SalMar',        ticker: 'SALM',  last: 682.00, chg: +2.45, m1: +5.1, ytd: +18.3, costKg: 45.8, ebitKg: 26.1 },
-      { name: 'Lerøy',         ticker: 'LSG',   last:  52.30, chg: -0.63, m1: -1.8, ytd:  +8.4, costKg: 50.1, ebitKg: 19.8 },
-      { name: 'Bakkafrost',    ticker: 'BAKKA', last: 588.50, chg: +3.11, m1: +6.8, ytd: +22.1, costKg: 44.5, ebitKg: 28.3 },
-      { name: 'Grieg Seafood', ticker: 'GSF',   last:  68.90, chg: -1.20, m1: -3.2, ytd:  -4.5, costKg: 55.3, ebitKg: 14.2 },
-      { name: 'Norway Royal',  ticker: 'NRS',   last: 198.00, chg: +0.88, m1: +2.1, ytd:  +9.7, costKg: 47.0, ebitKg: 21.0 },
+      { name: 'Mowi',          ticker: 'MOWI',  last: null, chg: null, m1: null, ytd: null, costKg: null, ebitKg: null },
+      { name: 'SalMar',        ticker: 'SALM',  last: null, chg: null, m1: null, ytd: null, costKg: null, ebitKg: null },
+      { name: 'Lerøy',         ticker: 'LSG',   last: null, chg: null, m1: null, ytd: null, costKg: null, ebitKg: null },
+      { name: 'Bakkafrost',    ticker: 'BAKKA', last: null, chg: null, m1: null, ytd: null, costKg: null, ebitKg: null },
+      { name: 'Grieg Seafood', ticker: 'GSF',   last: null, chg: null, m1: null, ytd: null, costKg: null, ebitKg: null },
+      { name: 'Norway Royal',  ticker: 'NRS',   last: null, chg: null, m1: null, ytd: null, costKg: null, ebitKg: null },
     ],
     biomass: [
       { m: 'JAN', biomass: 720, harvest:  82, future: false },
@@ -1844,15 +1864,15 @@ const MOCK = {
       { id: 'PO 13', name: 'Øst-Finnmark',              x: 82, y: 10, status: 'green'  },
     ],
     bio_indicators: [
-      { label: 'Sea Lice',    v: '0.18', u: 'avg/fish', s: 'ok' },
-      { label: 'Temperature', v: '8.2',  u: '°C',       s: 'ok' },
-      { label: 'Mortality',   v: '1.4',  u: '%',        s: 'warn' },
-      { label: 'Feed Conv.',  v: '1.15', u: 'FCR',      s: 'ok' },
+      { label: 'Sea Lice',    v: null, u: 'avg/fish', s: 'ok' },
+      { label: 'Temperature', v: null, u: '°C',       s: 'ok' },
+      { label: 'Mortality',   v: null, u: '%',        s: 'warn' },
+      { label: 'Feed Conv.',  v: null, u: 'FCR',      s: 'ok' },
     ],
     benchmarks: [
-      { name: 'Nasdaq Salmon', v: '112.45' },
-      { name: 'Fish Pool FW',  v: '98.30'  },
-      { name: 'Smolt Index',   v: '42.7M'  },
+      { name: 'Nasdaq Salmon', v: null },
+      { name: 'Fish Pool FW',  v: null },
+      { name: 'Smolt Index',   v: null },
     ],
     signals: [
       { tone: 'neutral', tag: 'WATCH',   impact: 'high', headline: 'PO 4 traffic light goes red', detail: 'Mortality and lice load force production cap reduction. Supply impact <b>~6% regional</b> over 24 months.' },
@@ -1877,8 +1897,8 @@ const MOCK = {
 
   // Shipping (placeholder)
   shipping: {
-    spot: { bdi: 1842, vlcc: 38500, suez: 41200, lng: 86000, eurusd: 1.082, usdnok: 10.78 },
-    chg:  { bdi: +2.4, vlcc: +1.8, suez: +0.9, lng: -1.2, eurusd: +0.04, usdnok: -0.18 },
+    spot: { bdi: null, vlcc: null, suez: null, lng: null, eurusd: null, usdnok: null },
+    chg:  { bdi: null, vlcc: null, suez: null, lng: null, eurusd: null, usdnok: null },
     verdict: {
       tone: 'bullish',
       stance: 'BULLISH · TANKERS LEAD',
@@ -1890,7 +1910,7 @@ const MOCK = {
       ],
       meta: { conviction: 'MEDIUM', timeframe: '2–6 MONTHS', updated: 'API · WIP' },
     },
-    range52w: { lo: 1420, hi: 2150, current: 1842, ctx: 'BDI in mid-upper band of 52w range. Up <b>+8.2%</b> from 1m ago.' },
+    range52w: { lo: null, hi: null, current: null, ctx: null },
     primarySignal: {
       tone: 'bullish', tag: 'BULLISH', impact: 'high',
       headline: 'VLCC rates jump on China summer stockpiling',
@@ -1898,20 +1918,20 @@ const MOCK = {
       action: 'WATCH: <b>FRO · BWLPG</b> · BDI <b>1,900</b> resistance',
     },
     cards: [
-      { ttl: 'BALTIC DRY INDEX',  big: '1,842', u: 'pts',     d: '+2.4% w/w', up: true,  desc: 'Capesize spot leads on iron ore demand recovery.' },
-      { ttl: 'VLCC TD3C',         big: '38,500',u: '$/day',   d: '+1.8% w/w', up: true,  desc: 'AG-China rates firm ahead of summer driving season.' },
-      { ttl: 'SUEZMAX TD20',      big: '41,200',u: '$/day',   d: '+0.9% w/w', up: true,  desc: 'West Africa-UKC trade tight, sanctions push tonne-miles.' },
-      { ttl: 'LNG SPARK 174K',    big: '86,000',u: '$/day',   d: '−1.2% w/w', up: false, desc: 'European storage 92% full caps near-term demand.' },
-      { ttl: 'CONTAINER (SCFI)',  big: '1,512', u: 'pts',     d: '+5.1% w/w', up: true,  desc: 'Red Sea diversions sustain elevated trans-Pacific.' },
-      { ttl: 'CLEAN PRODUCT MR',  big: '24,800',u: '$/day',   d: '−0.8% w/w', up: false, desc: 'Atlantic basin softens on refinery turnarounds.' },
+      { ttl: 'BALTIC DRY INDEX',  big: null, u: 'pts',   d: null, up: null, desc: 'Capesize spot leads on iron ore demand recovery.' },
+      { ttl: 'VLCC TD3C',         big: null, u: '$/day', d: null, up: null, desc: 'AG-China rates firm ahead of summer driving season.' },
+      { ttl: 'SUEZMAX TD20',      big: null, u: '$/day', d: null, up: null, desc: 'West Africa-UKC trade tight, sanctions push tonne-miles.' },
+      { ttl: 'LNG SPARK 174K',    big: null, u: '$/day', d: null, up: null, desc: 'European storage 92% full caps near-term demand.' },
+      { ttl: 'CONTAINER (SCFI)',  big: null, u: 'pts',   d: null, up: null, desc: 'Red Sea diversions sustain elevated trans-Pacific.' },
+      { ttl: 'CLEAN PRODUCT MR',  big: null, u: '$/day', d: null, up: null, desc: 'Atlantic basin softens on refinery turnarounds.' },
     ],
     equities: [
-      { name: 'Frontline',     ticker: 'FRO',   last: 218.50, chg: +2.10, m1: +4.5, ytd: +12.4 },
-      { name: 'Flex LNG',      ticker: 'FLNG',  last: 312.40, chg: -0.85, m1: -2.1, ytd: -3.8 },
-      { name: 'Stolt-Nielsen', ticker: 'SNI',   last: 412.00, chg: +1.20, m1: +3.2, ytd: +9.1 },
-      { name: 'Wallenius W.',  ticker: 'WAWI',  last:  98.40, chg: +0.45, m1: +1.8, ytd: +5.6 },
-      { name: 'BW LPG',        ticker: 'BWLPG', last: 162.80, chg: +1.95, m1: +5.4, ytd: +14.2 },
-      { name: 'Höegh Autoliners',ticker:'HAUTO',last: 118.20, chg: +0.85, m1: +2.4, ytd: +7.8 },
+      { name: 'Frontline',     ticker: 'FRO',   last: null, chg: null, m1: null, ytd: null },
+      { name: 'Flex LNG',      ticker: 'FLNG',  last: null, chg: null, m1: null, ytd: null },
+      { name: 'Stolt-Nielsen', ticker: 'SNI',   last: null, chg: null, m1: null, ytd: null },
+      { name: 'Wallenius W.',  ticker: 'WAWI',  last: null, chg: null, m1: null, ytd: null },
+      { name: 'BW LPG',        ticker: 'BWLPG', last: null, chg: null, m1: null, ytd: null },
+      { name: 'Höegh Autoliners',ticker:'HAUTO',last: null, chg: null, m1: null, ytd: null },
     ],
     insights: [
       { tone: 'bullish', tag: 'TANKERS', impact: 'high', title: 'Tanker market structurally tight', desc: 'Orderbook only <b>10% of fleet</b>. Tonne-miles up on Russia/Red Sea reroutes.', why: 'Multi-year supply discipline' },
@@ -2024,8 +2044,7 @@ function renderSidebar() {
   if (state.industry === 'oil') {
     const eq = MOCK.oil.equities;
     const fx = [
-      { p: 'USD / NOK', v: fmt(MOCK.oil.spot.nokusd, 2), pct: fmtSigned(MOCK.oil.chg.nokusd, 2)+'%', up: MOCK.oil.chg.nokusd>0 },
-      { p: 'EUR / USD', v: fmt(MOCK.oil.spot.eurusd, 3), pct: fmtSigned(MOCK.oil.chg.eurusd, 3)+'%', up: MOCK.oil.chg.eurusd>0 },
+      { p: 'USD / NOK', v: fmt(MOCK.oil.spot.nokusd, 2), pct: MOCK.oil.chg.nokusd != null ? fmtSigned(MOCK.oil.chg.nokusd, 2)+'%' : '—', up: MOCK.oil.chg.nokusd > 0 },
     ];
     sb.appendChild(buildSection('Watchlist · Oslo', eq.length, eq.map(c => buildEqRow(c))));
     sb.appendChild(buildSection('FX', null, fx.map(f => buildFxRow(f))));
@@ -2038,15 +2057,15 @@ function renderSidebar() {
     sb.appendChild(buildSection('Benchmarks', null, MOCK.salmon.benchmarks.map(b =>
       el('div', { class: 'sb-row' }, [
         el('span', { class: 'name' }, b.name),
-        el('span', { class: 'v num' }, b.v),
+        el('span', { class: 'v num' }, b.v ?? '—'),
       ])
     )));
     sb.appendChild(buildSection('Bio Indicators', null, MOCK.salmon.bio_indicators.map(b =>
       el('div', { class: 'sb-row' }, [
         el('span', { class: 'name' }, b.label),
         el('span', { class: 'v bio-pill' }, [
-          el('span', { class: 'num' }, b.v),
-          el('span', { html: '<span style="color:var(--ink-3);font-size:9.5px;margin-left:4px">'+b.u+'</span>' }),
+          el('span', { class: 'num' }, b.v ?? '—'),
+          b.v != null ? el('span', { html: '<span style="color:var(--ink-3);font-size:9.5px;margin-left:4px">'+b.u+'</span>' }) : null,
           el('span', { class: 'led ' + b.s }),
         ]),
       ])
@@ -2055,10 +2074,10 @@ function renderSidebar() {
     const eq = MOCK.shipping.equities;
     sb.appendChild(buildSection('Watchlist · Oslo', eq.length, eq.map(c => buildEqRow(c))));
     sb.appendChild(buildSection('Routes', null, [
-      buildKvRow('AG → China', '+1.8%', true),
-      buildKvRow('WAF → UKC',  '+0.9%', true),
-      buildKvRow('USG → Asia', '−0.4%', false),
-      buildKvRow('TPM Pacific','+5.1%', true),
+      buildKvRow('AG → China', '—', null),
+      buildKvRow('WAF → UKC',  '—', null),
+      buildKvRow('USG → Asia', '—', null),
+      buildKvRow('TPM Pacific','—', null),
     ]));
   }
 }
@@ -2077,7 +2096,7 @@ function buildEqRow(c) {
       el('div', { class: 'name' }, c.name),
       el('div', { class: 'ticker num' }, c.ticker),
     ]),
-    el('div', { class: 'v num ' + (c.chg >= 0 ? 'up' : 'down') }, fmtSigned(c.chg, 2) + '%'),
+    el('div', { class: 'v num ' + (c.chg != null ? (c.chg >= 0 ? 'up' : 'down') : '') }, c.chg != null ? fmtSigned(c.chg, 2) + '%' : '—'),
   ]);
 }
 function buildFxRow(f) {
@@ -2093,15 +2112,15 @@ function buildMacroRow(m) {
   return el('div', { class: 'sb-row' }, [
     el('span', { class: 'name' }, m.k),
     el('div', { class: 'v num' }, [
-      el('span', {}, m.v),
-      el('span', { html: '<span style="color:var(--ink-3);font-size:9.5px;margin-left:4px">'+m.u+'</span>' }),
+      el('span', {}, m.v ?? '—'),
+      m.v != null ? el('span', { html: '<span style="color:var(--ink-3);font-size:9.5px;margin-left:4px">'+m.u+'</span>' }) : null,
     ]),
   ]);
 }
 function buildKvRow(k, v, up) {
   return el('div', { class: 'sb-row' }, [
     el('span', { class: 'name' }, k),
-    el('span', { class: 'v num ' + (up ? 'up' : 'down') }, v),
+    el('span', { class: 'v num ' + (up === null ? '' : up ? 'up' : 'down') }, v),
   ]);
 }
 
@@ -2218,11 +2237,11 @@ function renderOil(m) {
 
   // OHLC
   heroPanel.appendChild(el('div', { class: 'ohlc-row' }, [
-    buildOhlc('Open', '$82.90'),
-    buildOhlc('High', '$85.10'),
-    buildOhlc('Low',  '$82.45'),
-    buildOhlc('Range','2.65'),
-    buildOhlc('52w',  '$71–$92'),
+    buildOhlc('Open',  null),
+    buildOhlc('High',  null),
+    buildOhlc('Low',   null),
+    buildOhlc('Range', null),
+    buildOhlc('52w',   null),
   ]));
 
   // Chart
@@ -2256,6 +2275,7 @@ function renderOil(m) {
 
 /* ─── SALMON VIEW ─────────────────────────────────────── */
 function renderSalmon(m) {
+  m.appendChild(el('div', { class: 'demo-notice' }, 'DEMO DATA — Live salmon price integration coming soon. Numbers below are placeholders only.'));
   const sl = MOCK.salmon;
 
   // ── Verdict hero ──
@@ -2264,8 +2284,8 @@ function renderSalmon(m) {
     label: 'NASDAQ SALMON · SPOT',
     value: fmt(sl.spot.nasdaq, 2),
     unit: 'NOK/kg',
-    delta: fmtSigned(sl.chg.nasdaq, 2) + '% w/w',
-    up: sl.chg.nasdaq > 0,
+    delta: sl.chg.nasdaq != null ? fmtSigned(sl.chg.nasdaq, 2) + '% w/w' : '—',
+    up: sl.chg.nasdaq != null && sl.chg.nasdaq > 0,
     range52w: sl.range52w,
   }));
 
@@ -2306,11 +2326,11 @@ function renderSalmon(m) {
 
   // OHLC for spot price
   heroPanel.appendChild(el('div', { class: 'ohlc-row' }, [
-    buildOhlc('Open', '109.20'),
-    buildOhlc('High', '118.40'),
-    buildOhlc('Low',  '96.50'),
-    buildOhlc('Range','21.90'),
-    buildOhlc('52w',  '82–118'),
+    buildOhlc('Open',  null),
+    buildOhlc('High',  null),
+    buildOhlc('Low',   null),
+    buildOhlc('Range', null),
+    buildOhlc('52w',   null),
   ]));
 
   const salSeed = state.salmonRange === '1W' ? 6 : 7;
@@ -2354,6 +2374,7 @@ function renderSalmon(m) {
 
 /* ─── SHIPPING VIEW ─────────────────────────────────── */
 function renderShipping(m) {
+  m.appendChild(el('div', { class: 'demo-notice' }, 'DEMO DATA — Live shipping rate integration coming soon. Numbers below are placeholders only.'));
   const sh = MOCK.shipping;
 
   // Verdict hero
@@ -2362,8 +2383,8 @@ function renderShipping(m) {
     label: 'BALTIC DRY · BDI',
     value: fmt(sh.spot.bdi, 0),
     unit: 'pts',
-    delta: fmtSigned(sh.chg.bdi, 1) + '% w/w',
-    up: sh.chg.bdi > 0,
+    delta: sh.chg.bdi != null ? fmtSigned(sh.chg.bdi, 1) + '% w/w' : '—',
+    up: sh.chg.bdi != null && sh.chg.bdi > 0,
     range52w: sh.range52w,
   }));
 
@@ -2397,9 +2418,9 @@ function renderShipping(m) {
         el('span', { class: 'api' }, 'API · WIP'),
       ]),
       el('div', { class: 'pv' }, [
-        el('span', { class: 'big num' }, c.big),
-        el('span', { class: 'u' }, c.u),
-        el('span', { class: 'd num ' + (c.up ? 'up' : 'down') }, c.d),
+        el('span', { class: 'big num' }, c.big ?? '—'),
+        c.big != null ? el('span', { class: 'u' }, c.u) : null,
+        el('span', { class: 'd num ' + (c.up ? 'up' : c.up === false ? 'down' : '') }, c.d ?? ''),
       ]),
       el('div', { class: 'desc' }, c.desc),
       el('div', { class: 'mini-spark', html: buildSparkSvg(genSeries(Math.random()*100, 30, 100, 4), c.up) }),
@@ -2415,9 +2436,9 @@ function renderShipping(m) {
 /* ─── Reusable builders ───────────────────────────── */
 
 function buildVerdict(v, spot) {
-  // Range strip
   const r = spot.range52w;
-  const pct = ((r.current - r.lo) / (r.hi - r.lo)) * 100;
+  const hasRange = r.lo != null && r.hi != null && r.current != null;
+  const pct = hasRange ? ((r.current - r.lo) / (r.hi - r.lo)) * 100 : 0;
   const fillW = Math.min(95, Math.max(5, pct));
   return el('div', { class: 'verdict ' + v.tone }, [
     el('div', { class: 'vd-left' }, [
@@ -2444,16 +2465,16 @@ function buildVerdict(v, spot) {
         el('span', { class: 'vd ' + (spot.up ? 'up' : 'down') }, spot.delta),
       ]),
       el('div', { class: 'range-strip' }, [
-        el('div', { class: 'rs-bar', html:
-          '<div class="rs-fill" style="left:0;width:'+fillW+'%"></div>' +
-          '<div class="rs-pin" style="left:'+fillW+'%"></div>'
+        el('div', { class: 'rs-bar', html: hasRange
+          ? '<div class="rs-fill" style="left:0;width:'+fillW+'%"></div><div class="rs-pin" style="left:'+fillW+'%"></div>'
+          : ''
         }),
         el('div', { class: 'rs-labels' }, [
-          el('span', {}, fmt(r.lo, 2) + ' · 52w lo'),
-          el('span', { class: 'rs-here' }, fmt(r.current, 2)),
-          el('span', {}, fmt(r.hi, 2) + ' · 52w hi'),
+          el('span', {}, hasRange ? fmt(r.lo, 2) + ' · 52w lo' : '—'),
+          el('span', { class: 'rs-here' }, r.current != null ? fmt(r.current, 2) : '—'),
+          el('span', {}, hasRange ? fmt(r.hi, 2) + ' · 52w hi' : '—'),
         ]),
-        el('div', { class: 'rs-context', html: r.ctx }),
+        r.ctx ? el('div', { class: 'rs-context', html: r.ctx }) : null,
       ]),
     ]),
   ]);
@@ -2527,12 +2548,12 @@ function buildKpi(k) {
   return el('div', { class: 'kpi' + (k.tier === 1 ? ' tier1' : '') }, [
     el('div', { class: 'label' }, k.label),
     el('div', { class: 'value' }, [
-      el('span', { class: 'big num' }, k.value),
-      k.unit ? el('span', { class: 'unit' }, k.unit) : null,
+      el('span', { class: 'big num' }, k.value ?? '—'),
+      k.unit && k.value != null ? el('span', { class: 'unit' }, k.unit) : null,
     ]),
-    el('div', { class: 'delta ' + (k.up === null ? '' : k.up ? 'up' : 'down') }, [
-      k.up !== null && k.up !== undefined ? el('span', { class: 'arrow' }, k.up ? '▲' : '▼') : null,
-      el('span', {}, k.delta || ''),
+    el('div', { class: 'delta ' + (k.up == null ? '' : k.up ? 'up' : 'down') }, [
+      k.up != null ? el('span', { class: 'arrow' }, k.up ? '▲' : '▼') : null,
+      el('span', {}, k.delta ?? '—'),
       k.sub ? el('span', { class: 'label-sm' }, '· ' + k.sub) : null,
     ]),
   ]);
@@ -2541,7 +2562,7 @@ function buildKpi(k) {
 function buildOhlc(l, v) {
   return el('div', { class: 'ohlc-cell' }, [
     el('div', { class: 'l' }, l),
-    el('div', { class: 'v num' }, v),
+    el('div', { class: 'v num' }, v ?? '—'),
   ]);
 }
 
@@ -2752,14 +2773,16 @@ function buildEqTable(title, rows, cols) {
       el('div', { class: 'n' }, r.name),
       el('div', { class: 't' }, r.ticker + ' · OBX'),
     ]));
-    tr.appendChild(el('td', { class: 'num' }, fmt(r.last, 2)));
+    tr.appendChild(el('td', { class: 'num' }, r.last != null ? fmt(r.last, 2) : '—'));
     tr.appendChild(el('td', {}, [
-      el('span', { class: 'pct-pill ' + (r.chg >= 0 ? 'up' : 'down') + ' num' }, fmtSigned(r.chg, 2) + '%'),
+      r.chg != null
+        ? el('span', { class: 'pct-pill ' + (r.chg >= 0 ? 'up' : 'down') + ' num' }, fmtSigned(r.chg, 2) + '%')
+        : el('span', { class: 'num' }, '—'),
     ]));
-    tr.appendChild(el('td', { class: 'num ' + (r.m1 >= 0 ? 'up' : 'down') }, fmtSigned(r.m1, 1) + '%'));
-    tr.appendChild(el('td', { class: 'num ' + (r.ytd >= 0 ? 'up' : 'down') }, fmtSigned(r.ytd, 1) + '%'));
-    if (cols.includes('COST/KG')) tr.appendChild(el('td', { class: 'num' }, fmt(r.costKg, 1)));
-    if (cols.includes('EBIT/KG')) tr.appendChild(el('td', { class: 'num ' + (r.ebitKg > 20 ? 'up' : 'warn') }, fmt(r.ebitKg, 1)));
+    tr.appendChild(el('td', { class: 'num ' + (r.m1 != null ? (r.m1 >= 0 ? 'up' : 'down') : '') }, r.m1 != null ? fmtSigned(r.m1, 1) + '%' : '—'));
+    tr.appendChild(el('td', { class: 'num ' + (r.ytd != null ? (r.ytd >= 0 ? 'up' : 'down') : '') }, r.ytd != null ? fmtSigned(r.ytd, 1) + '%' : '—'));
+    if (cols.includes('COST/KG')) tr.appendChild(el('td', { class: 'num' }, r.costKg != null ? fmt(r.costKg, 1) : '—'));
+    if (cols.includes('EBIT/KG')) tr.appendChild(el('td', { class: 'num ' + (r.ebitKg != null ? (r.ebitKg > 20 ? 'up' : 'warn') : '') }, r.ebitKg != null ? fmt(r.ebitKg, 1) : '—'));
     tbody.appendChild(tr);
   }
   t.appendChild(tbody);
