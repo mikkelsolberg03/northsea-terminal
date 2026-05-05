@@ -2724,11 +2724,91 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cmd palette
   setupCmdK();
 
-  // Initial render
+  // Initial render with mock data, then fetch live
   renderAll();
   updateClock();
   setInterval(updateClock, 1000);
+  fetchLiveData();
+  setInterval(() => fetchLiveData(), state.refresh * 1000);
 });
+
+/* ─── Live data fetch ────────────────────────────── */
+async function fetchLiveData() {
+  async function safeFetch(url) {
+    try {
+      const ctrl = new AbortController();
+      const id = setTimeout(() => ctrl.abort(), 4000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(id);
+      if (!res.ok) throw new Error(res.status);
+      return await res.json();
+    } catch(e) { return null; }
+  }
+
+  const t0 = Date.now();
+  const [prices, stocks, macro, news] = await Promise.all([
+    safeFetch('/api/prices'),
+    safeFetch('/api/stocks'),
+    safeFetch('/api/eia/macro'),
+    safeFetch('/api/news'),
+  ]);
+
+  let changed = false;
+
+  // ── Oil prices ──
+  if (prices) {
+    if (prices.brent?.price)  { MOCK.oil.spot.brent  = prices.brent.price;  MOCK.oil.chg.brent  = prices.brent.pctChange  || 0; }
+    if (prices.wti?.price)    { MOCK.oil.spot.wti    = prices.wti.price;    MOCK.oil.chg.wti    = prices.wti.pctChange    || 0; }
+    if (prices.gas?.price)    { MOCK.oil.spot.gas    = prices.gas.price;    MOCK.oil.chg.gas    = prices.gas.pctChange    || 0; }
+    if (prices.nok?.price)    { MOCK.oil.spot.nokusd = prices.nok.price;    MOCK.oil.chg.nokusd = prices.nok.pctChange    || 0; }
+    // update verdict spot price too
+    MOCK.oil.range52w.current = MOCK.oil.spot.brent;
+    changed = true;
+  }
+
+  // Prefer EIA prices if available (more reliable for Brent/WTI)
+  if (macro?.brent?.price)  { MOCK.oil.spot.brent = macro.brent.price; MOCK.oil.chg.brent = macro.brent.pctChange || 0; }
+  if (macro?.wti?.price)    { MOCK.oil.spot.wti   = macro.wti.price;   MOCK.oil.chg.wti   = macro.wti.pctChange   || 0; }
+
+  // ── Oil equities ──
+  if (stocks && Array.isArray(stocks)) {
+    stocks.forEach(s => {
+      const eq = MOCK.oil.equities.find(e => e.ticker === s.ticker);
+      if (eq && s.price != null) { eq.last = s.price; eq.chg = s.pct || 0; }
+    });
+    changed = true;
+  }
+
+  // ── EIA macro ──
+  if (macro) {
+    if (macro.us_inventories) {
+      const row = MOCK.oil.macro.find(m => m.k === 'US INVENT.');
+      if (row) { row.v = macro.us_inventories.value; row.d = macro.us_inventories.change; row.up = macro.us_inventories.up; }
+    }
+    if (macro.opec_prod) {
+      const row = MOCK.oil.macro.find(m => m.k === 'OPEC+ PROD');
+      if (row) { row.v = macro.opec_prod.value; row.d = macro.opec_prod.change; }
+    }
+    if (macro.global_demand) {
+      const row = MOCK.oil.macro.find(m => m.k === 'GLOBAL DEMAND');
+      if (row) { row.v = macro.global_demand.value; row.d = macro.global_demand.change; }
+    }
+    changed = true;
+  }
+
+  // ── News ──
+  if (news && Array.isArray(news) && news.length > 0) {
+    MOCK.oil.news = news.map(n => ({ src: n.src || '', t: n.time || '', tag: n.tag || '', h: n.headline || '' }));
+    changed = true;
+  }
+
+  if (changed) {
+    renderAll();
+    const lat = Date.now() - t0;
+    const latEl = document.getElementById('sb-lat');
+    if (latEl) latEl.textContent = lat + ' ms';
+  }
+}
 
 /* ─── Clock ──────────────────────────────────────── */
 function updateClock() {

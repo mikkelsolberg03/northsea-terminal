@@ -19,6 +19,7 @@ CORS(app)
 
 NEWS_API_KEY     = os.environ.get("NEWS_API_KEY", "e0a774cffe04469eb6f84c24fc584840")
 OILPRICE_API_KEY = os.environ.get("OILPRICE_API_KEY", "c3efab204f01f02aebe6fd9cef29154c5f302e75d8cd0752ddd62906e97c297a")
+EIA_API_KEY      = os.environ.get("EIA_API_KEY", "1UViC4ArhMLe0eZoRRJXoe4fHoonHjzjYGqoeCDE")
 
 # ─── CACHE ───────────────────────────────────────────────────────────────────
 cache = {}
@@ -26,6 +27,7 @@ CACHE_TTL = {
     "prices":  60,
     "history": 300,
     "news":    300,
+    "eia":     300,
 }
 
 def get_cache(key):
@@ -279,6 +281,141 @@ def api_eqnr_yield():
     except:
         pass
     return jsonify({"yield": "N/A"})
+
+
+# ─── EIA API ─────────────────────────────────────────────────────────────────
+def eia_fetch(path, params):
+    try:
+        r = requests.get(
+            f"https://api.eia.gov/v2{path}",
+            params={"api_key": EIA_API_KEY, **params},
+            timeout=10
+        )
+        return r.json().get("response", {}).get("data", [])
+    except Exception as e:
+        print(f"  [WARN] EIA {path}: {e}")
+        return []
+
+@app.route("/api/eia/macro")
+def api_eia_macro():
+    cached = get_cache("eia_macro")
+    if cached:
+        return jsonify(cached)
+
+    print("[INFO] Fetching EIA macro data...")
+    result = {}
+
+    # US crude inventories — weekly, thousand barrels → convert to mbbl
+    inv = eia_fetch("/petroleum/stoc/wstk/data/", {
+        "frequency": "weekly",
+        "data[0]": "value",
+        "facets[series][]": "WCRSTUS1",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 2,
+    })
+    if len(inv) >= 2:
+        latest = inv[0]["value"]
+        prev   = inv[1]["value"]
+        draw   = round((latest - prev) / 1000, 1)
+        result["us_inventories"] = {
+            "value":  str(round(latest / 1000, 1)),
+            "unit":   "mbbl",
+            "change": f"{'+' if draw > 0 else ''}{draw} w/w",
+            "up":     draw < 0,  # draw (negative) is bullish
+        }
+
+    # Brent spot price — daily
+    brent = eia_fetch("/petroleum/pri/spt/data/", {
+        "frequency": "daily",
+        "data[0]": "value",
+        "facets[series][]": "RBRTE",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 2,
+    })
+    if len(brent) >= 2:
+        latest = brent[0]["value"]
+        prev   = brent[1]["value"]
+        pct    = round((latest - prev) / prev * 100, 2) if prev else None
+        result["brent"] = {"price": safe_float(latest), "pctChange": pct, "period": brent[0]["period"]}
+
+    # WTI spot price — daily
+    wti = eia_fetch("/petroleum/pri/spt/data/", {
+        "frequency": "daily",
+        "data[0]": "value",
+        "facets[series][]": "RWTC",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 2,
+    })
+    if len(wti) >= 2:
+        latest = wti[0]["value"]
+        prev   = wti[1]["value"]
+        pct    = round((latest - prev) / prev * 100, 2) if prev else None
+        result["wti"] = {"price": safe_float(latest), "pctChange": pct, "period": wti[0]["period"]}
+
+    # OPEC production — STEO monthly forecast (mb/d)
+    opec = eia_fetch("/steo/data/", {
+        "frequency": "monthly",
+        "data[0]": "value",
+        "facets[seriesId][]": "COPRWOPEC",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 2,
+    })
+    if len(opec) >= 2:
+        latest = opec[0]["value"]
+        prev   = opec[1]["value"]
+        change = round(latest - prev, 1)
+        result["opec_prod"] = {
+            "value":  str(round(latest, 1)),
+            "unit":   "mbpd",
+            "change": f"{'+' if change >= 0 else ''}{change} m/m",
+        }
+
+    # Global liquid fuels consumption — STEO monthly (mb/d)
+    demand = eia_fetch("/steo/data/", {
+        "frequency": "monthly",
+        "data[0]": "value",
+        "facets[seriesId][]": "PATC_WORLD",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 2,
+    })
+    if len(demand) >= 2:
+        latest = demand[0]["value"]
+        prev   = demand[1]["value"]
+        change = round(latest - prev, 1)
+        result["global_demand"] = {
+            "value":  str(round(latest, 1)),
+            "unit":   "mbpd",
+            "change": f"{'+' if change >= 0 else ''}{change} m/m",
+        }
+
+    set_cache("eia_macro", result)
+    return jsonify(result)
+
+
+@app.route("/api/eia/history/brent")
+def api_eia_brent_history():
+    cached = get_cache("eia_brent_hist")
+    if cached:
+        return jsonify(cached)
+
+    print("[INFO] Fetching EIA Brent history...")
+    data = eia_fetch("/petroleum/pri/spt/data/", {
+        "frequency": "daily",
+        "data[0]": "value",
+        "facets[series][]": "RBRTE",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 365,
+    })
+    result = [{"x": d["period"], "y": safe_float(d["value"])}
+              for d in reversed(data) if d.get("value") is not None]
+    set_cache("eia_brent_hist", result)
+    return jsonify(result)
 
 
 # ─── SALMON API (stub — wire real data source when available) ─────────────────
