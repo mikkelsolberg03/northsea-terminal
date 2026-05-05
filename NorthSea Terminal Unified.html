@@ -2934,7 +2934,7 @@ async function fetchLiveData() {
   }
 
   const t0 = Date.now();
-  const [prices, stocks, macro, news, brentDetail, returns, salmonStocks, shippingStocks] = await Promise.all([
+  const [prices, stocks, macro, news, brentDetail, returns, salmonStocks, shippingStocks, rigcount, norway10y] = await Promise.all([
     safeFetch('/api/prices'),
     safeFetch('/api/stocks'),
     safeFetch('/api/eia/macro'),
@@ -2943,6 +2943,8 @@ async function fetchLiveData() {
     safeFetch('/api/returns'),
     safeFetch('/api/salmon/stocks'),
     safeFetch('/api/shipping/stocks'),
+    safeFetch('/api/rigcount'),
+    safeFetch('/api/norway10y'),
   ]);
 
   let changed = false;
@@ -3029,6 +3031,20 @@ async function fetchLiveData() {
       const eq = MOCK.shipping.equities.find(e => e.ticker === s.ticker);
       if (eq && s.price != null) { eq.last = s.price; eq.chg = s.pct || 0; }
     });
+    changed = true;
+  }
+
+  // ── US Rig Count (Baker Hughes) ──
+  if (rigcount?.value != null) {
+    const row = MOCK.oil.macro.find(m => m.k === 'US RIGS');
+    if (row) { row.v = rigcount.value; row.d = rigcount.change; row.up = rigcount.up; }
+    changed = true;
+  }
+
+  // ── Norway 10Y yield (Norges Bank) ──
+  if (norway10y?.value != null) {
+    const row = MOCK.oil.macro.find(m => m.k === 'NORWAY 10Y');
+    if (row) { row.v = norway10y.value; row.d = norway10y.change; row.up = norway10y.up; }
     changed = true;
   }
 

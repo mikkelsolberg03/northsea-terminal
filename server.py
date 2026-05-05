@@ -17,9 +17,10 @@ import time
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
-NEWS_API_KEY     = os.environ.get("NEWS_API_KEY", "e0a774cffe04469eb6f84c24fc584840")
+NEWS_API_KEY     = os.environ.get("NEWS_API_KEY",     "e0a774cffe04469eb6f84c24fc584840")
 OILPRICE_API_KEY = os.environ.get("OILPRICE_API_KEY", "c3efab204f01f02aebe6fd9cef29154c5f302e75d8cd0752ddd62906e97c297a")
-EIA_API_KEY      = os.environ.get("EIA_API_KEY", "1UViC4ArhMLe0eZoRRJXoe4fHoonHjzjYGqoeCDE")
+EIA_API_KEY      = os.environ.get("EIA_API_KEY",      "1UViC4ArhMLe0eZoRRJXoe4fHoonHjzjYGqoeCDE")
+BH_API_KEY       = os.environ.get("BH_API_KEY",       "e42e4990da96864f1ca1bf1955eb8fc2054dfd3f2b479ee2efa88a14a7f175cf")
 
 # ─── CACHE ───────────────────────────────────────────────────────────────────
 cache = {}
@@ -30,6 +31,8 @@ CACHE_TTL = {
     "eia":     300,
     "brent":   300,
     "returns": 3600,
+    "rigcount":3600,   # Baker Hughes updates weekly
+    "norway":  3600,   # Norges Bank bond yield
 }
 
 def get_cache(key):
@@ -501,6 +504,86 @@ def api_returns():
     results = {s["ticker"]: ticker_returns(s["sym"]) for s in stocks}
     set_cache("returns_main", results)
     return jsonify(results)
+
+
+@app.route("/api/rigcount")
+def api_rigcount():
+    """US rig count from Baker Hughes API (updates weekly)"""
+    cached = get_cache("rigcount_main")
+    if cached:
+        return jsonify(cached)
+    print("[INFO] Fetching Baker Hughes US rig count...")
+    try:
+        # Baker Hughes North America rig count API
+        url = "https://rigcount.bakerhughes.com/api/v1/na-rig-counts"
+        headers = {"x-api-key": BH_API_KEY, "Accept": "application/json"}
+        cutoff = (datetime.now() - timedelta(days=21)).strftime("%Y-%m-%d")
+        r = requests.get(url, headers=headers,
+                         params={"date_from": cutoff}, timeout=10)
+        data = r.json()
+        # Response is a list; find US total (land + offshore)
+        if isinstance(data, list):
+            us_rows = [d for d in data if str(d.get("country", "")).lower() in ("us", "usa", "united states")]
+            if us_rows:
+                # Latest date
+                us_rows.sort(key=lambda x: x.get("date", ""), reverse=True)
+                latest_date = us_rows[0].get("date", "")
+                week_rows = [d for d in us_rows if d.get("date") == latest_date]
+                prev_date = sorted(set(d.get("date") for d in us_rows if d.get("date") < latest_date), reverse=True)
+                prev_rows = [d for d in us_rows if d.get("date") == prev_date[0]] if prev_date else []
+
+                total  = sum(int(d.get("total", 0) or 0) for d in week_rows)
+                p_total = sum(int(d.get("total", 0) or 0) for d in prev_rows) if prev_rows else None
+                chg = total - p_total if p_total is not None else None
+                result = {
+                    "value": str(total),
+                    "change": (f"{'+' if chg >= 0 else ''}{chg} w/w") if chg is not None else None,
+                    "up": chg >= 0 if chg is not None else None,
+                    "date": latest_date,
+                }
+                set_cache("rigcount_main", result)
+                return jsonify(result)
+        # Fallback: try a different response shape (some versions return a dict)
+        if isinstance(data, dict):
+            total = data.get("total") or data.get("count")
+            if total:
+                result = {"value": str(total), "change": None, "up": None}
+                set_cache("rigcount_main", result)
+                return jsonify(result)
+    except Exception as e:
+        print(f"  [ERR] rigcount: {e}")
+    return jsonify({"value": None, "change": None, "up": None})
+
+
+@app.route("/api/norway10y")
+def api_norway10y():
+    """Norway 10-year government bond yield from Norges Bank (free, no key)"""
+    cached = get_cache("norway10y_main")
+    if cached:
+        return jsonify(cached)
+    print("[INFO] Fetching Norway 10Y yield from Norges Bank...")
+    try:
+        # SDMX-JSON REST API — IR dataset, 10Y government bond
+        url = "https://data.norges-bank.no/api/data/IR/B.GBON.10Y.NOK"
+        r = requests.get(url, params={"format": "sdmx-json", "lastNObservations": 2}, timeout=10)
+        d = r.json()
+        # Navigate the SDMX-JSON structure
+        series = d["data"]["dataSets"][0]["series"]
+        obs = list(series.values())[0]["observations"]
+        sorted_keys = sorted(obs.keys(), key=lambda x: int(x))
+        latest_val = obs[sorted_keys[-1]][0]
+        prev_val   = obs[sorted_keys[-2]][0] if len(sorted_keys) > 1 else None
+        chg_bps = round((latest_val - prev_val) * 100) if prev_val is not None else None
+        result = {
+            "value":  f"{latest_val:.2f}",
+            "change": f"{'+' if chg_bps >= 0 else ''}{chg_bps} bps" if chg_bps is not None else None,
+            "up":     chg_bps < 0 if chg_bps is not None else None,  # falling yield = bullish for bonds
+        }
+        set_cache("norway10y_main", result)
+        return jsonify(result)
+    except Exception as e:
+        print(f"  [ERR] norway10y: {e}")
+    return jsonify({"value": None, "change": None, "up": None})
 
 
 # ─── SALMON API (stub — wire real data source when available) ─────────────────
