@@ -124,11 +124,14 @@ def api_prices():
     nok   = ticker_info("USDNOK=X")
 
     for key, sym, data in [("brent","BZ=F",brent),("wti","CL=F",wti),("gas","NG=F",gas)]:
-        if data["price"] and data["change"] is None:
-            yf_data = ticker_info(sym)
-            if yf_data.get("prev") and data["price"]:
-                data["change"]    = safe_float(data["price"] - yf_data["prev"])
-                data["pctChange"] = safe_float((data["price"] - yf_data["prev"]) / yf_data["prev"] * 100)
+        yf_data = ticker_info(sym)
+        # If OilPriceAPI returned nothing, use yfinance price
+        if not data["price"] and yf_data.get("price"):
+            data["price"] = yf_data["price"]
+        # Fill in change/pct from yfinance prev close
+        if data["price"] and data["change"] is None and yf_data.get("prev"):
+            data["change"]    = safe_float(data["price"] - yf_data["prev"])
+            data["pctChange"] = safe_float((data["price"] - yf_data["prev"]) / yf_data["prev"] * 100)
 
     result = {"brent": brent, "wti": wti, "gas": gas, "nok": nok}
     try:
