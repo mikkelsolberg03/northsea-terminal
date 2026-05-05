@@ -1743,6 +1743,7 @@ const MOCK = {
   oil: {
     spot: { brent: 84.32, wti: 80.18, gas: 2.84, nokusd: 10.78, eurusd: null },
     chg:  { brent: +1.42, wti: +0.95, gas: -0.06, nokusd: -0.18, eurusd: null },
+    ohlc: { open: null, high: null, low: null, range: null },
     verdict: {
       tone: 'bullish',
       stance: 'MILDLY BULLISH',
@@ -2046,6 +2047,9 @@ function renderSidebar() {
     const fx = [
       { p: 'USD / NOK', v: fmt(MOCK.oil.spot.nokusd, 2), pct: MOCK.oil.chg.nokusd != null ? fmtSigned(MOCK.oil.chg.nokusd, 2)+'%' : '—', up: MOCK.oil.chg.nokusd > 0 },
     ];
+    if (MOCK.oil.spot.eurusd != null) {
+      fx.push({ p: 'EUR / USD', v: fmt(MOCK.oil.spot.eurusd, 3), pct: MOCK.oil.chg.eurusd != null ? fmtSigned(MOCK.oil.chg.eurusd, 3)+'%' : '—', up: MOCK.oil.chg.eurusd > 0 });
+    }
     sb.appendChild(buildSection('Watchlist · Oslo', eq.length, eq.map(c => buildEqRow(c))));
     sb.appendChild(buildSection('FX', null, fx.map(f => buildFxRow(f))));
     const macroSec = buildSection('Macro Snapshot', null, MOCK.oil.macro.slice(0,4).map(m => buildMacroRow(m)));
@@ -2236,12 +2240,14 @@ function renderOil(m) {
   heroPanel.appendChild(ki);
 
   // OHLC
+  const ohlc = MOCK.oil.ohlc;
+  const r52  = MOCK.oil.range52w;
   heroPanel.appendChild(el('div', { class: 'ohlc-row' }, [
-    buildOhlc('Open',  null),
-    buildOhlc('High',  null),
-    buildOhlc('Low',   null),
-    buildOhlc('Range', null),
-    buildOhlc('52w',   null),
+    buildOhlc('Open',  ohlc.open  != null ? '$' + fmt(ohlc.open,  2) : null),
+    buildOhlc('High',  ohlc.high  != null ? '$' + fmt(ohlc.high,  2) : null),
+    buildOhlc('Low',   ohlc.low   != null ? '$' + fmt(ohlc.low,   2) : null),
+    buildOhlc('Range', ohlc.range != null ? fmt(ohlc.range, 2)       : null),
+    buildOhlc('52w',   r52.lo != null && r52.hi != null ? '$' + fmt(r52.lo, 0) + '–$' + fmt(r52.hi, 0) : null),
   ]));
 
   // Chart
@@ -2928,11 +2934,15 @@ async function fetchLiveData() {
   }
 
   const t0 = Date.now();
-  const [prices, stocks, macro, news] = await Promise.all([
+  const [prices, stocks, macro, news, brentDetail, returns, salmonStocks, shippingStocks] = await Promise.all([
     safeFetch('/api/prices'),
     safeFetch('/api/stocks'),
     safeFetch('/api/eia/macro'),
     safeFetch('/api/news'),
+    safeFetch('/api/brent_detail'),
+    safeFetch('/api/returns'),
+    safeFetch('/api/salmon/stocks'),
+    safeFetch('/api/shipping/stocks'),
   ]);
 
   let changed = false;
@@ -2943,7 +2953,7 @@ async function fetchLiveData() {
     if (prices.wti?.price)    { MOCK.oil.spot.wti    = prices.wti.price;    MOCK.oil.chg.wti    = prices.wti.pctChange    || 0; }
     if (prices.gas?.price)    { MOCK.oil.spot.gas    = prices.gas.price;    MOCK.oil.chg.gas    = prices.gas.pctChange    || 0; }
     if (prices.nok?.price)    { MOCK.oil.spot.nokusd = prices.nok.price;    MOCK.oil.chg.nokusd = prices.nok.pctChange    || 0; }
-    // update verdict spot price too
+    if (prices.eurusd?.price) { MOCK.oil.spot.eurusd = prices.eurusd.price; MOCK.oil.chg.eurusd = prices.eurusd.pctChange || 0; }
     MOCK.oil.range52w.current = MOCK.oil.spot.brent;
     changed = true;
   }
@@ -2952,11 +2962,37 @@ async function fetchLiveData() {
   if (macro?.brent?.price)  { MOCK.oil.spot.brent = macro.brent.price; MOCK.oil.chg.brent = macro.brent.pctChange || 0; }
   if (macro?.wti?.price)    { MOCK.oil.spot.wti   = macro.wti.price;   MOCK.oil.chg.wti   = macro.wti.pctChange   || 0; }
 
-  // ── Oil equities ──
+  // ── Brent OHLC + 52w range ──
+  if (brentDetail && brentDetail.open != null) {
+    MOCK.oil.ohlc = {
+      open:  brentDetail.open,
+      high:  brentDetail.high,
+      low:   brentDetail.low,
+      range: brentDetail.range,
+    };
+    if (brentDetail.w52lo) MOCK.oil.range52w.lo = brentDetail.w52lo;
+    if (brentDetail.w52hi) MOCK.oil.range52w.hi = brentDetail.w52hi;
+    if (brentDetail.w52lo && brentDetail.w52hi && MOCK.oil.range52w.current) {
+      const pct = ((MOCK.oil.range52w.current - brentDetail.w52lo) / (brentDetail.w52hi - brentDetail.w52lo) * 100).toFixed(0);
+      MOCK.oil.range52w.ctx = `Trading <b>${pct}% through</b> the 52w range.`;
+    }
+    changed = true;
+  }
+
+  // ── Oil equities (price + day change) ──
   if (stocks && Array.isArray(stocks)) {
     stocks.forEach(s => {
       const eq = MOCK.oil.equities.find(e => e.ticker === s.ticker);
       if (eq && s.price != null) { eq.last = s.price; eq.chg = s.pct || 0; }
+    });
+    changed = true;
+  }
+
+  // ── Oil equities (1M + YTD returns) ──
+  if (returns && typeof returns === 'object') {
+    MOCK.oil.equities.forEach(eq => {
+      const r = returns[eq.ticker];
+      if (r) { eq.m1 = r.m1; eq.ytd = r.ytd; }
     });
     changed = true;
   }
@@ -2975,6 +3011,24 @@ async function fetchLiveData() {
       const row = MOCK.oil.macro.find(m => m.k === 'GLOBAL DEMAND');
       if (row) { row.v = macro.global_demand.value; row.d = macro.global_demand.change; }
     }
+    changed = true;
+  }
+
+  // ── Salmon equities (live price + day change) ──
+  if (salmonStocks && Array.isArray(salmonStocks)) {
+    salmonStocks.forEach(s => {
+      const eq = MOCK.salmon.equities.find(e => e.ticker === s.ticker);
+      if (eq && s.price != null) { eq.last = s.price; eq.chg = s.pct || 0; }
+    });
+    changed = true;
+  }
+
+  // ── Shipping equities (live price + day change) ──
+  if (shippingStocks && Array.isArray(shippingStocks)) {
+    shippingStocks.forEach(s => {
+      const eq = MOCK.shipping.equities.find(e => e.ticker === s.ticker);
+      if (eq && s.price != null) { eq.last = s.price; eq.chg = s.pct || 0; }
+    });
     changed = true;
   }
 

@@ -11,7 +11,7 @@ from flask_cors import CORS
 import yfinance as yf
 import requests
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, date as date_type
 import time
 
 app = Flask(__name__, static_folder='.')
@@ -28,6 +28,8 @@ CACHE_TTL = {
     "history": 300,
     "news":    300,
     "eia":     300,
+    "brent":   300,
+    "returns": 3600,
 }
 
 def get_cache(key):
@@ -46,6 +48,37 @@ def safe_float(val, decimals=2):
         return round(float(val), decimals)
     except:
         return None
+
+def ticker_returns(symbol):
+    """1-month and YTD return from 1y price history"""
+    try:
+        t = yf.Ticker(symbol)
+        hist = t.history(period="1y")
+        if len(hist) < 5:
+            return {"m1": None, "ytd": None}
+        current = float(hist["Close"].iloc[-1])
+        dates = [d.date() if hasattr(d, "date") else d for d in hist.index]
+        today = datetime.now().date()
+        cutoff_m1  = today - timedelta(days=30)
+        cutoff_ytd = date_type(today.year, 1, 1)
+        m1 = ytd = None
+        for i in range(len(dates) - 1, -1, -1):
+            if dates[i] <= cutoff_m1:
+                old = float(hist["Close"].iloc[i])
+                if old > 0:
+                    m1 = safe_float((current - old) / old * 100)
+                break
+        for i in range(len(dates)):
+            if dates[i] >= cutoff_ytd:
+                jan = float(hist["Close"].iloc[i])
+                if jan > 0:
+                    ytd = safe_float((current - jan) / jan * 100)
+                break
+        return {"m1": m1, "ytd": ytd}
+    except Exception as e:
+        print(f"  [WARN] returns {symbol}: {e}")
+        return {"m1": None, "ytd": None}
+
 
 def ticker_info(symbol):
     try:
@@ -133,7 +166,8 @@ def api_prices():
             data["change"]    = safe_float(data["price"] - yf_data["prev"])
             data["pctChange"] = safe_float((data["price"] - yf_data["prev"]) / yf_data["prev"] * 100)
 
-    result = {"brent": brent, "wti": wti, "gas": gas, "nok": nok}
+    eurusd = ticker_info("EURUSD=X")
+    result = {"brent": brent, "wti": wti, "gas": gas, "nok": nok, "eurusd": eurusd}
     try:
         bp, wp = brent["price"], wti["price"]
         if bp and wp:
@@ -419,6 +453,54 @@ def api_eia_brent_history():
               for d in reversed(data) if d.get("value") is not None]
     set_cache("eia_brent_hist", result)
     return jsonify(result)
+
+
+@app.route("/api/brent_detail")
+def api_brent_detail():
+    """Today's OHLC + 52-week range for Brent (BZ=F via yfinance)"""
+    cached = get_cache("brent_detail")
+    if cached:
+        return jsonify(cached)
+    print("[INFO] Fetching Brent OHLC + 52w range...")
+    try:
+        t = yf.Ticker("BZ=F")
+        hist = t.history(period="1y")
+        if len(hist) < 2:
+            return jsonify({})
+        today = hist.iloc[-1]
+        result = {
+            "open":  safe_float(today["Open"]),
+            "high":  safe_float(today["High"]),
+            "low":   safe_float(today["Low"]),
+            "range": safe_float(today["High"] - today["Low"]),
+            "w52lo": safe_float(float(hist["Low"].min())),
+            "w52hi": safe_float(float(hist["High"].max())),
+        }
+        set_cache("brent_detail", result)
+        return jsonify(result)
+    except Exception as e:
+        print(f"  [ERR] brent_detail: {e}")
+        return jsonify({})
+
+
+@app.route("/api/returns")
+def api_returns():
+    """1-month and YTD returns for all oil equities (cached 1h)"""
+    cached = get_cache("returns_main")
+    if cached:
+        return jsonify(cached)
+    print("[INFO] Calculating oil equity returns (1M + YTD)...")
+    stocks = [
+        {"ticker": "EQNR",  "sym": "EQNR.OL"},
+        {"ticker": "AKRBP", "sym": "AKRBP.OL"},
+        {"ticker": "VAR",   "sym": "VAR.OL"},
+        {"ticker": "DNO",   "sym": "DNO.OL"},
+        {"ticker": "BWE",   "sym": "BWE.OL"},
+        {"ticker": "PGS",   "sym": "PGS.OL"},
+    ]
+    results = {s["ticker"]: ticker_returns(s["sym"]) for s in stocks}
+    set_cache("returns_main", results)
+    return jsonify(results)
 
 
 # ─── SALMON API (stub — wire real data source when available) ─────────────────
