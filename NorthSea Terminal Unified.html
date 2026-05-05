@@ -1403,6 +1403,58 @@ body {
 /* Coast pin styles */
 .coast-pin { transition: r 120ms; }
 .coast-pin:hover { r: 6; }
+
+/* ─── Chart tooltip ────────────────────────────────────────── */
+.chart-frame { position: relative; cursor: crosshair; }
+.chart-tip {
+  display: none;
+  position: absolute;
+  top: 10px;
+  pointer-events: none;
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  white-space: nowrap;
+}
+.chart-tip .ct-price {
+  font-size: 14px; font-weight: 600;
+  color: var(--ink); font-family: var(--font-num);
+  letter-spacing: -0.01em;
+}
+.chart-tip .ct-date {
+  font-size: 9.5px; color: var(--ink-3);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 2px; display: block;
+}
+
+/* ─── Chart commodity selector tabs ───────────────────────── */
+.chart-tabs {
+  display: flex; gap: 0;
+}
+.chart-tab {
+  padding: 3px 11px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink-3);
+  font-size: 10px; font-family: var(--font-ui);
+  font-weight: 600; letter-spacing: 0.08em;
+  border-bottom: 1px solid transparent;
+  margin-bottom: -1px;
+  transition: color 100ms;
+}
+.chart-tab:hover { color: var(--ink-2); }
+.chart-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ─── News item click state ────────────────────────────────── */
+.news-item.has-url { cursor: pointer; }
+.news-item.has-url:hover .news-hl { color: var(--accent); }
+.news-item .news-src-link {
+  font-size: 8.5px; letter-spacing: 0.1em;
+  color: var(--ink-4); text-transform: uppercase;
+  margin-top: 4px; display: block;
+}
 </style>
 </head>
 <body data-mode="terminal">
@@ -1661,6 +1713,8 @@ const state = {
   currency: 'nok',
   oilRange: '1M',
   salmonRange: '1M',
+  oilChart: 'brent',
+  salmonChart: 'nasdaq',
 };
 
 /* ─── MOCK DATA ───────────────────────────────────────────── */
@@ -1714,12 +1768,12 @@ const MOCK = {
       { tone: 'bearish', tag: 'GAS',   impact: 'med',  title: 'EU LNG storage 92% full',                   desc: 'Mild winter capped withdrawals. TTF below €30/MWh into Q2.', why: 'Pressures upstream gas-weighted names' },
     ],
     news: [
-      { src: 'REUTERS',       t: '08:42', tag: 'OPEC',     h: 'OPEC+ keeps production cuts through Q3 amid demand uncertainty' },
-      { src: 'BLOOMBERG',     t: '07:15', tag: 'EQUINOR',  h: 'Equinor to invest $4bn in Bay du Nord field, targets 2030 first oil' },
-      { src: 'FT',            t: '06:30', tag: 'PRICES',   h: 'Brent crude tops $84 as Middle East tensions resurface' },
-      { src: 'EIA',           t: 'YDA',   tag: 'INVENT.',  h: 'US crude inventories drop 2.8 million barrels, beating forecasts' },
-      { src: 'OFFSHORE-MAG',  t: 'YDA',   tag: 'NCS',      h: 'Vår Energi greenlights Balder X subsea expansion' },
-      { src: 'PLATTS',        t: '2D',    tag: 'GAS',      h: 'European gas storage withdrawals slow as warm spell continues' },
+      { src: 'REUTERS',       t: '08:42', tag: 'OPEC',     h: 'OPEC+ keeps production cuts through Q3 amid demand uncertainty',             url: 'https://www.reuters.com/business/energy/' },
+      { src: 'BLOOMBERG',     t: '07:15', tag: 'EQUINOR',  h: 'Equinor to invest $4bn in Bay du Nord field, targets 2030 first oil',        url: 'https://www.bloomberg.com/energy' },
+      { src: 'FT',            t: '06:30', tag: 'PRICES',   h: 'Brent crude tops $84 as Middle East tensions resurface',                     url: 'https://www.ft.com/commodities' },
+      { src: 'EIA',           t: 'YDA',   tag: 'INVENT.',  h: 'US crude inventories drop 2.8 million barrels, beating forecasts',           url: 'https://www.eia.gov/petroleum/supply/weekly/' },
+      { src: 'OFFSHORE-MAG',  t: 'YDA',   tag: 'NCS',      h: 'Vår Energi greenlights Balder X subsea expansion',                          url: 'https://www.offshore-mag.com/' },
+      { src: 'PLATTS',        t: '2D',    tag: 'GAS',      h: 'European gas storage withdrawals slow as warm spell continues',              url: 'https://www.spglobal.com/commodityinsights/' },
     ],
   },
 
@@ -1811,13 +1865,13 @@ const MOCK = {
       { tone: 'bearish', tag: 'GSF',   impact: 'med', title: 'Grieg margin under pressure', desc: 'Cost/kg at <b>NOK 55.3</b>, well above peers. Mortality issues in BC operations weigh on outlook.', why: 'Avoid until BC stabilises' },
     ],
     news: [
-      { src: 'INTRAFISH',     t: '08:42', tag: 'HARVEST',    h: 'Mowi reports record Q1 harvest volumes in Northern Norway' },
-      { src: 'UNDERCURRENT',  t: '07:15', tag: 'REGULATION', h: 'Sea lice levels force PO4 into production cap reduction' },
-      { src: 'SALMONBUSINESS',t: '06:30', tag: 'OFFSHORE',   h: 'SalMar Ocean Farm expansion receives final permits' },
-      { src: 'FISKERIDIR',    t: 'YDA',   tag: 'POLICY',     h: 'Updated traffic light assessments signal tighter regulations ahead' },
-      { src: 'INTRAFISH',     t: 'YDA',   tag: 'DEMAND',     h: 'Global salmon demand hits new peak as Asian markets expand' },
-      { src: 'ILAKS',         t: '2D',    tag: 'SUPPLY',     h: 'Record smolt releases expected to boost 2027 supply forecasts' },
-      { src: 'NASDAQ',        t: '2D',    tag: 'MARKETS',    h: 'Salmon futures curve shifts into contango amid supply concerns' },
+      { src: 'INTRAFISH',     t: '08:42', tag: 'HARVEST',    h: 'Mowi reports record Q1 harvest volumes in Northern Norway',                 url: 'https://www.intrafish.com/' },
+      { src: 'UNDERCURRENT',  t: '07:15', tag: 'REGULATION', h: 'Sea lice levels force PO4 into production cap reduction',                  url: 'https://www.undercurrentnews.com/' },
+      { src: 'SALMONBUSINESS',t: '06:30', tag: 'OFFSHORE',   h: 'SalMar Ocean Farm expansion receives final permits',                       url: 'https://salmonbusiness.com/' },
+      { src: 'FISKERIDIR',    t: 'YDA',   tag: 'POLICY',     h: 'Updated traffic light assessments signal tighter regulations ahead',        url: 'https://www.fiskeridir.no/' },
+      { src: 'INTRAFISH',     t: 'YDA',   tag: 'DEMAND',     h: 'Global salmon demand hits new peak as Asian markets expand',               url: 'https://www.intrafish.com/' },
+      { src: 'ILAKS',         t: '2D',    tag: 'SUPPLY',     h: 'Record smolt releases expected to boost 2027 supply forecasts',            url: 'https://ilaks.no/' },
+      { src: 'NASDAQ',        t: '2D',    tag: 'MARKETS',    h: 'Salmon futures curve shifts into contango amid supply concerns',           url: 'https://www.nasdaq.com/solutions/nasdaq-salmon-index' },
     ],
   },
 
@@ -1865,11 +1919,11 @@ const MOCK = {
       { tone: 'bullish', tag: 'CAPE',    impact: 'med',  title: 'Capesize iron-ore demand recovery', desc: 'China steel mill margins improving, restocking cycle starting.', why: 'Dry bulk catch-up trade' },
     ],
     news: [
-      { src: 'TRADEWINDS',  t: '08:42', tag: 'TANKERS',  h: 'VLCC rates jump as China stockpiles ahead of summer' },
-      { src: 'LLOYD\'S',    t: '07:15', tag: 'LNG',      h: 'Flex LNG signs new long-term charter with Asian utility' },
-      { src: 'BLOOMBERG',   t: '06:30', tag: 'BDI',      h: 'Baltic Dry climbs above 1,800 on iron ore strength' },
-      { src: 'SPLASH',      t: 'YDA',   tag: 'RED SEA',  h: 'Container lines extend Cape route through Q3' },
-      { src: 'FT',          t: 'YDA',   tag: 'SANCTIONS',h: 'Shadow fleet grows as Russia oil exports adapt' },
+      { src: 'TRADEWINDS',  t: '08:42', tag: 'TANKERS',  h: 'VLCC rates jump as China stockpiles ahead of summer',          url: 'https://www.tradewindsnews.com/' },
+      { src: 'LLOYD\'S',    t: '07:15', tag: 'LNG',      h: 'Flex LNG signs new long-term charter with Asian utility',      url: 'https://www.lloydslist.com/' },
+      { src: 'BLOOMBERG',   t: '06:30', tag: 'BDI',      h: 'Baltic Dry climbs above 1,800 on iron ore strength',           url: 'https://www.bloomberg.com/energy' },
+      { src: 'SPLASH',      t: 'YDA',   tag: 'RED SEA',  h: 'Container lines extend Cape route through Q3',                 url: 'https://splash247.com/' },
+      { src: 'FT',          t: 'YDA',   tag: 'SANCTIONS',h: 'Shadow fleet grows as Russia oil exports adapt',               url: 'https://www.ft.com/shipping' },
     ],
   },
 };
@@ -2084,14 +2138,18 @@ function renderRight() {
     el('div', { class: 'news-filters' }, filters.map((f, i) => el('button', {
       class: 'news-chip' + (i === 0 ? ' active' : ''),
     }, f))),
-    ...news.map(n => el('div', { class: 'news-item' }, [
-      el('div', { class: 'news-meta' }, [
-        el('span', {}, n.src),
-        el('span', { class: 'num' }, n.t),
-      ]),
-      el('div', { class: 'news-hl' }, n.h),
-      el('div', { class: 'news-tag' }, n.tag),
-    ])),
+    ...news.map(n => {
+      const item = el('div', { class: 'news-item' + (n.url ? ' has-url' : '') }, [
+        el('div', { class: 'news-meta' }, [
+          el('span', {}, n.src),
+          el('span', { class: 'num' }, n.t),
+        ]),
+        el('div', { class: 'news-hl' }, n.h),
+        el('div', { class: 'news-tag' }, n.tag),
+      ]);
+      if (n.url) item.addEventListener('click', () => window.open(n.url, '_blank'));
+      return item;
+    }),
   ]);
   r.appendChild(newsSec);
 }
@@ -2126,18 +2184,36 @@ function renderOil(m) {
   }
 
   // ── Secondary KPIs + chart ──
+  const oilCommodities = [
+    { key: 'brent', label: 'BRENT', spotKey: 'brent', chgKey: 'brent', titleHtml: '<b>Brent Crude</b> · ICE · USD/bbl', vol: 2.0 },
+    { key: 'wti',   label: 'WTI',   spotKey: 'wti',   chgKey: 'wti',   titleHtml: '<b>WTI Crude</b> · NYMEX · USD/bbl', vol: 2.1 },
+    { key: 'gas',   label: 'NAT GAS', spotKey: 'gas', chgKey: 'gas',   titleHtml: '<b>Natural Gas</b> · Henry Hub · USD/MMBtu', vol: 0.12 },
+  ];
+  const activeCom = oilCommodities.find(c => c.key === state.oilChart) || oilCommodities[0];
+
   const heroPanel = el('div', { class: 'panel' });
-  heroPanel.appendChild(el('div', { class: 'panel-head' }, [
-    el('div', { class: 'title', html: '<b>Brent Crude</b> · ICE · USD/bbl' }),
-    el('div', { class: 'aux' }, [
-      buildRange(['1W','1M','3M','6M','1Y'], state.oilRange, (r) => { state.oilRange = r; renderMain(); }),
-    ]),
-  ]));
+  const panelHead = el('div', { class: 'panel-head' });
+  panelHead.appendChild(el('div', { class: 'title', html: activeCom.titleHtml }));
+
+  const rightAux = el('div', { class: 'aux' }, [
+    buildRange(['1W','1M','3M','6M','1Y'], state.oilRange, (r) => { state.oilRange = r; renderMain(); }),
+  ]);
+  // Commodity tabs
+  const comTabs = el('div', { class: 'chart-tabs' });
+  for (const c of oilCommodities) {
+    const tab = el('span', { class: 'chart-tab' + (c.key === state.oilChart ? ' active' : '') }, c.label);
+    tab.addEventListener('click', () => { state.oilChart = c.key; renderMain(); });
+    comTabs.appendChild(tab);
+  }
+  rightAux.insertBefore(comTabs, rightAux.firstChild);
+  panelHead.appendChild(rightAux);
+  heroPanel.appendChild(panelHead);
+
   const ki = el('div', { class: 'kpi-row' });
   ki.style.gridTemplateColumns = 'repeat(3, 1fr)';
-  ki.appendChild(buildKpi({ label: 'WTI · SPOT',    value: '$'+fmt(oil.spot.wti,2),   unit: '/bbl', delta: fmtSigned(oil.chg.wti,2)+'%', up: oil.chg.wti>0 }));
-  ki.appendChild(buildKpi({ label: 'NAT GAS',       value: '$'+fmt(oil.spot.gas,2),   unit: '/MMBtu', delta: fmtSigned(oil.chg.gas,2)+'%', up: oil.chg.gas>0 }));
-  ki.appendChild(buildKpi({ label: 'USD / NOK',     value: fmt(oil.spot.nokusd,2),    unit: '', delta: fmtSigned(oil.chg.nokusd,2)+'%', up: oil.chg.nokusd>0 }));
+  ki.appendChild(buildKpi({ label: 'WTI · SPOT',    value: '$'+fmt(oil.spot.wti,2),   unit: '/bbl',   delta: fmtSigned(oil.chg.wti,2)+'%',    up: oil.chg.wti>0 }));
+  ki.appendChild(buildKpi({ label: 'NAT GAS',       value: '$'+fmt(oil.spot.gas,2),   unit: '/MMBtu', delta: fmtSigned(oil.chg.gas,2)+'%',    up: oil.chg.gas>0 }));
+  ki.appendChild(buildKpi({ label: 'USD / NOK',     value: fmt(oil.spot.nokusd,2),    unit: '',       delta: fmtSigned(oil.chg.nokusd,2)+'%', up: oil.chg.nokusd>0 }));
   heroPanel.appendChild(ki);
 
   // OHLC
@@ -2150,9 +2226,12 @@ function renderOil(m) {
   ]));
 
   // Chart
-  const series = genSeries(state.oilRange === '1W' ? 1 : state.oilRange === '1M' ? 2 : state.oilRange === '3M' ? 3 : state.oilRange === '6M' ? 4 : 5, 80, oil.spot.brent, 2.0);
+  const nPts = state.oilRange === '1W' ? 7 : state.oilRange === '1M' ? 30 : state.oilRange === '3M' ? 90 : state.oilRange === '6M' ? 180 : 365;
+  const oilSeed = state.oilRange === '1W' ? 1 : state.oilRange === '1M' ? 2 : state.oilRange === '3M' ? 3 : state.oilRange === '6M' ? 4 : 5;
+  const series = genSeries(oilSeed, 80, oil.spot[activeCom.spotKey], activeCom.vol);
+  const labels = genLabels(series.length, state.oilRange);
   heroPanel.appendChild(el('div', { class: 'chart-wrap' }, [
-    buildAreaChart(series, 280),
+    buildAreaChart(series, 280, labels),
   ]));
   m.appendChild(heroPanel);
 
@@ -2196,16 +2275,32 @@ function renderSalmon(m) {
   }
 
   // Hero secondary KPIs + chart
+  const salmonCommodities = [
+    { key: 'nasdaq',  label: 'NASDAQ',   spotKey: 'nasdaq',  titleHtml: '<b>Nasdaq Salmon Index</b> · Spot · NOK/kg', vol: 3.5 },
+    { key: 'region3', label: 'REGION 3', spotKey: 'region3', titleHtml: '<b>Region 3</b> · Spot · NOK/kg', vol: 3.2 },
+    { key: 'region4', label: 'REGION 4', spotKey: 'region4', titleHtml: '<b>Region 4</b> · Spot · NOK/kg', vol: 3.8 },
+  ];
+  const activeSal = salmonCommodities.find(c => c.key === state.salmonChart) || salmonCommodities[0];
+
   const heroPanel = el('div', { class: 'panel' });
-  heroPanel.appendChild(el('div', { class: 'panel-head' }, [
-    el('div', { class: 'title', html: '<b>Nasdaq Salmon Index</b> · Spot · NOK/kg' }),
-    el('div', { class: 'aux' }, [
-      buildRange(['1W','1M','3M','6M','1Y'], state.salmonRange, (r)=>{state.salmonRange = r; renderMain();}),
-    ]),
-  ]));
+  const salPanelHead = el('div', { class: 'panel-head' });
+  salPanelHead.appendChild(el('div', { class: 'title', html: activeSal.titleHtml }));
+
+  const salRightAux = el('div', { class: 'aux' }, [
+    buildRange(['1W','1M','3M','6M','1Y'], state.salmonRange, (r)=>{state.salmonRange = r; renderMain();}),
+  ]);
+  const salComTabs = el('div', { class: 'chart-tabs' });
+  for (const c of salmonCommodities) {
+    const tab = el('span', { class: 'chart-tab' + (c.key === state.salmonChart ? ' active' : '') }, c.label);
+    tab.addEventListener('click', () => { state.salmonChart = c.key; renderMain(); });
+    salComTabs.appendChild(tab);
+  }
+  salRightAux.insertBefore(salComTabs, salRightAux.firstChild);
+  salPanelHead.appendChild(salRightAux);
+  heroPanel.appendChild(salPanelHead);
+
   const ki = el('div', { class: 'kpi-row' });
   ki.style.gridTemplateColumns = 'repeat(3, 1fr)';
-  // skip the tier1 (now in verdict); show 3 supporting KPIs
   for (const k of sl.kpis.slice(1)) ki.appendChild(buildKpi(k));
   heroPanel.appendChild(ki);
 
@@ -2218,9 +2313,11 @@ function renderSalmon(m) {
     buildOhlc('52w',  '82–118'),
   ]));
 
-  const series = genSeries(state.salmonRange === '1W' ? 6 : 7, 80, sl.spot.nasdaq, 3.5);
+  const salSeed = state.salmonRange === '1W' ? 6 : 7;
+  const salSeries = genSeries(salSeed, 80, sl.spot[activeSal.spotKey], activeSal.vol);
+  const salLabels = genLabels(salSeries.length, state.salmonRange);
   heroPanel.appendChild(el('div', { class: 'chart-wrap' }, [
-    buildAreaChart(series, 260),
+    buildAreaChart(salSeries, 260, salLabels),
   ]));
   m.appendChild(heroPanel);
 
@@ -2455,7 +2552,20 @@ function buildRange(opts, current, onClick) {
   }, o)));
 }
 
-function buildAreaChart(values, height) {
+function genLabels(n, range) {
+  const now = new Date();
+  const totalDays = {
+    '1W': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 365,
+  }[range] || 30;
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(now - (n - 1 - i) * (totalDays / n) * 86400000);
+    if (range === '1W') return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit' });
+    if (range === '1Y') return d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  });
+}
+
+function buildAreaChart(values, height, labels) {
   const w = 800, h = height;
   const min = Math.min(...values) * 0.98;
   const max = Math.max(...values) * 1.02;
@@ -2465,21 +2575,19 @@ function buildAreaChart(values, height) {
     const y = 16 + (h - 56) - ((v - min) / range) * (h - 56);
     return [x, y];
   });
-  const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-  const area = line + ` L${pts[pts.length-1][0]},${h - 24} L${pts[0][0]},${h - 24} Z`;
-
+  const linePath = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = linePath + ` L${pts[pts.length-1][0]},${h-24} L${pts[0][0]},${h-24} Z`;
   const cstyle = state.chart;
   const accent = cssVar('--accent');
-
-  // Y ticks
   const yTicks = Array.from({ length: 5 }, (_, i) => {
     const val = min + (range / 4) * i;
     const y = 16 + (h - 56) - ((val - min) / range) * (h - 56);
-    return { val: val.toFixed(1), y };
+    return { val: val.toFixed(2), y };
   });
 
-  return el('div', { class: 'chart-frame', html: `
-    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+  const frame = el('div', { class: 'chart-frame' });
+  frame.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block;width:100%;height:100%">
       <defs>
         <linearGradient id="grd" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${accent}" stop-opacity="0.28"/>
@@ -2488,13 +2596,49 @@ function buildAreaChart(values, height) {
       </defs>
       ${yTicks.map(t => `
         <line x1="60" y1="${t.y}" x2="${w-20}" y2="${t.y}" stroke="${cssVar('--rule')}" stroke-width="0.5"/>
-        <text x="52" y="${t.y+3}" text-anchor="end" fill="${cssVar('--ink-3')}" font-size="10" font-family="${cssVar('--font-num') || 'Inter Tight'}">${t.val}</text>
+        <text x="52" y="${t.y+3}" text-anchor="end" fill="${cssVar('--ink-3')}" font-size="10" font-family="Inter">${t.val}</text>
       `).join('')}
       ${cstyle === 'filled' ? `<path d="${area}" fill="url(#grd)"/>` : ''}
-      <path d="${line}" fill="none" stroke="${accent}" stroke-width="${cstyle === 'line' ? 1.4 : 1.7}" stroke-linejoin="round" />
+      <path d="${linePath}" fill="none" stroke="${accent}" stroke-width="${cstyle === 'line' ? 1.4 : 1.7}" stroke-linejoin="round"/>
       <circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="3" fill="${accent}"/>
-    </svg>
-  `});
+      <line class="xhair-line" x1="0" y1="16" x2="0" y2="${h-24}"
+            stroke="${cssVar('--ink-3')}" stroke-width="0.7" stroke-dasharray="3,3" display="none"/>
+      <circle class="xhair-dot" cx="0" cy="0" r="3.5"
+              fill="${accent}" stroke="${cssVar('--bg-panel')}" stroke-width="1.5" display="none"/>
+    </svg>`;
+
+  const tip = el('div', { class: 'chart-tip' });
+  frame.appendChild(tip);
+
+  frame.addEventListener('mousemove', e => {
+    const rect = frame.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    const plotPct = (pct - 60/w) / ((w-80)/w);
+    const idx = Math.max(0, Math.min(values.length - 1, Math.round(plotPct * (values.length - 1))));
+
+    const svg   = frame.querySelector('svg');
+    const xline = svg.querySelector('.xhair-line');
+    const xdot  = svg.querySelector('.xhair-dot');
+    xline.setAttribute('x1', pts[idx][0]); xline.setAttribute('x2', pts[idx][0]);
+    xdot.setAttribute('cx', pts[idx][0]);  xdot.setAttribute('cy', pts[idx][1]);
+    xline.removeAttribute('display'); xdot.removeAttribute('display');
+
+    const tipLeft = Math.min(rect.width - 100, Math.max(0, e.clientX - rect.left - 48));
+    tip.style.left = tipLeft + 'px';
+    tip.style.display = 'block';
+    const lbl = labels ? labels[idx] : '';
+    tip.innerHTML = (lbl ? `<span class="ct-date">${lbl}</span>` : '') +
+                    `<span class="ct-price">${fmt(values[idx], 2)}</span>`;
+  });
+
+  frame.addEventListener('mouseleave', () => {
+    tip.style.display = 'none';
+    const svg = frame.querySelector('svg');
+    svg.querySelector('.xhair-line').setAttribute('display', 'none');
+    svg.querySelector('.xhair-dot').setAttribute('display', 'none');
+  });
+
+  return frame;
 }
 
 function buildBiomassChart(data) {
@@ -2813,7 +2957,7 @@ async function fetchLiveData() {
 
   // ── News ──
   if (news && Array.isArray(news) && news.length > 0) {
-    MOCK.oil.news = news.map(n => ({ src: n.src || '', t: n.time || '', tag: n.tag || '', h: n.headline || '' }));
+    MOCK.oil.news = news.map(n => ({ src: n.src || '', t: n.time || '', tag: n.tag || '', h: n.headline || '', url: n.url || '' }));
     changed = true;
   }
 
