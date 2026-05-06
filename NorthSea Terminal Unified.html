@@ -1475,10 +1475,37 @@ body {
   color: var(--ink-4); text-transform: uppercase;
   margin-top: 4px; display: block;
 }
+/* ─── Metric tooltip ───────────────────────────────────────── */
+#tip-box {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  max-width: 230px;
+  padding: 8px 11px 9px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.11);
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.13);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #1a1510;
+}
+#tip-box .tip-lbl {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9c9488;
+  margin-bottom: 3px;
+}
 </style>
 </head>
 <body data-mode="terminal">
 
+<div id="tip-box"><span class="tip-lbl"></span><span class="tip-txt"></span></div>
 <div class="shell">
 
   <!-- ─── Top bar ─── -->
@@ -1950,6 +1977,72 @@ const MOCK = {
 };
 
 /* ─── Helpers ─────────────────────────────────────────────── */
+/* ─── Metric tooltips ─────────────────────────────────────── */
+const TIPS = {
+  // Oil macro
+  'OPEC+ PROD':     { l: 'OPEC+ Production',          t: 'Output by the 23-nation OPEC+ coalition, in million barrels per day. They coordinate cuts and increases to manage global oil prices.' },
+  'US RIGS':        { l: 'US Rig Count',               t: 'Weekly Baker Hughes count of active US drilling rigs. A falling count signals slower future production — bullish for prices 6–12 months out.' },
+  'US INVENT.':     { l: 'US Crude Inventories',       t: 'Weekly EIA report of US commercial crude stockpiles (million barrels). A surprise draw is bullish for prices; a build is bearish.' },
+  'GLOBAL DEMAND':  { l: 'Global Oil Demand',          t: 'IEA/EIA estimate of total worldwide oil consumption in million barrels per day. Near record highs, driven by Asia and emerging markets.' },
+  'NORWAY 10Y':     { l: 'Norway 10-Year Bond Yield',  t: 'Yield on 10-year Norwegian government bonds. A key benchmark for the cost of capital for NCS operators and energy investors.' },
+  'BREAKEVEN':      { l: 'NCS Breakeven Price',        t: 'Brent price at which Norwegian Continental Shelf production covers all costs. NCS average is ~$35–40/bbl, among the lowest globally.' },
+  // Oil KPIs
+  'WTI · SPOT':     { l: 'WTI Crude Oil',              t: 'West Texas Intermediate — the US crude benchmark, traded on NYMEX in Cushing, Oklahoma. Typically $1–5 below Brent due to its landlocked delivery point.' },
+  'NAT GAS':        { l: 'Natural Gas (Henry Hub)',     t: 'US natural gas spot price at Henry Hub, Louisiana — the domestic benchmark. Measured in USD per million British thermal units (MMBtu). Highly seasonal.' },
+  'USD / NOK':      { l: 'USD/NOK Exchange Rate',       t: 'US dollars per Norwegian krone. NCS operators sell oil in USD but report in NOK — a weaker krone (higher rate) boosts NOK-reported revenues.' },
+  'EUR / USD':      { l: 'EUR/USD Exchange Rate',       t: 'Euros per US dollar. Affects European demand for dollar-priced crude and the competitiveness of European refining margins.' },
+  // OHLC
+  'Open':           { l: 'Opening Price',               t: 'Brent crude price at the start of today\'s trading session on ICE.' },
+  'High':           { l: 'Session High',                t: 'Highest Brent price reached during today\'s trading session.' },
+  'Low':            { l: 'Session Low',                 t: 'Lowest Brent price reached during today\'s trading session.' },
+  'Range':          { l: 'Daily Range',                 t: 'Difference between today\'s high and low. A wider range indicates higher intraday volatility.' },
+  '52w':            { l: '52-Week Range',               t: 'Highest and lowest Brent prices over the past 52 weeks. Shows where the current price sits within its annual trading band.' },
+  // Equities table headers
+  'LAST':           { l: 'Last Traded Price',           t: 'Most recent price traded on Oslo Børs (Oslo Stock Exchange).' },
+  'CHG %':          { l: 'Day Change',                  t: 'Percentage change vs. yesterday\'s closing price.' },
+  '1M':             { l: '1-Month Return',              t: 'Stock price return over the past 30 calendar days.' },
+  'YTD':            { l: 'Year-to-Date Return',         t: 'Stock price return from 1 January to today.' },
+  'COST/KG':        { l: 'Production Cost per kg',      t: 'Total cost of producing one kilogram of salmon (feed, labour, mortality, overhead). The primary efficiency metric in salmon farming.' },
+  'EBIT/KG':        { l: 'EBIT per kg',                 t: 'Earnings before interest and taxes per kilogram of salmon. The standard profitability benchmark for comparing Norwegian salmon farmers.' },
+  // Shipping cards
+  'BALTIC DRY INDEX': { l: 'Baltic Dry Index',          t: 'Daily composite of dry bulk shipping rates across Capesize, Panamax and Supramax vessels. A leading indicator of global commodity trade volumes.' },
+  'VLCC TD3C':      { l: 'VLCC Rate (TD3C)',            t: 'Very Large Crude Carrier spot rate, AG–China route. Reflects tanker demand for Middle East crude heading to Asia, in USD per day.' },
+  'SUEZMAX TD20':   { l: 'Suezmax Rate (TD20)',         t: 'Suezmax tanker spot rate, West Africa to UK Continent. Mid-size crude tankers (~130,000 DWT), in USD per day.' },
+  'LNG SPARK 174K': { l: 'LNG Carrier Rate',            t: 'Spot charter rate for a 174,000 cbm LNG carrier. Driven by liquefaction supply from Qatar/US and demand from Europe and Asia.' },
+  'CONTAINER (SCFI)':{ l: 'Shanghai Containerized Freight Index', t: 'Composite spot rates for container shipping from major Chinese ports. Tracks global consumer goods trade flows.' },
+  'CLEAN PRODUCT MR':{ l: 'MR Product Tanker Rate',    t: 'Medium Range clean product tanker spot rate. Transports refined fuels (gasoline, diesel, jet fuel) in USD per day.' },
+  // Sidebar macro
+  'EUR/USD':        { l: 'EUR/USD Exchange Rate',       t: 'Euros per US dollar. Affects European demand for dollar-priced crude oil.' },
+  'USD/NOK':        { l: 'USD/NOK Exchange Rate',       t: 'US dollars per Norwegian krone. A weaker krone boosts NOK revenues for NCS operators selling oil in USD.' },
+  'BRENT':          { l: 'Brent Crude Oil',             t: 'North Sea crude benchmark used to price ~70% of global oil trade. Traded on ICE London in USD per barrel.' },
+  'WTI':            { l: 'WTI Crude Oil',               t: 'West Texas Intermediate — US crude benchmark traded on NYMEX. Typically $1–5 below Brent.' },
+  'GAS':            { l: 'Natural Gas',                 t: 'Henry Hub natural gas spot price — the US benchmark, in USD per MMBtu.' },
+};
+
+(function initTooltip() {
+  const box = document.getElementById('tip-box');
+  const lbl = box.querySelector('.tip-lbl');
+  const txt = box.querySelector('.tip-txt');
+  document.addEventListener('mousemove', e => {
+    const anchor = e.target.closest('[data-tip]');
+    if (anchor) {
+      const tip = TIPS[anchor.getAttribute('data-tip')];
+      if (tip) {
+        lbl.textContent = tip.l;
+        txt.textContent = tip.t;
+        box.style.display = 'block';
+        const x = Math.min(e.clientX + 14, window.innerWidth - 250);
+        const y = e.clientY + 18;
+        box.style.left = x + 'px';
+        box.style.top  = y + 'px';
+        return;
+      }
+    }
+    box.style.display = 'none';
+  });
+  document.addEventListener('mouseleave', () => { box.style.display = 'none'; });
+})();
+
 function fmt(n, d=2) {
   if (n === null || n === undefined) return '—';
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -2104,7 +2197,7 @@ function buildEqRow(c) {
   ]);
 }
 function buildFxRow(f) {
-  return el('div', { class: 'sb-row' }, [
+  return el('div', { class: 'sb-row', 'data-tip': f.p.replace(' / ', '/') }, [
     el('span', { class: 'name' }, f.p),
     el('div', {}, [
       el('div', { class: 'v num' }, f.v),
@@ -2113,7 +2206,7 @@ function buildFxRow(f) {
   ]);
 }
 function buildMacroRow(m) {
-  return el('div', { class: 'sb-row' }, [
+  return el('div', { class: 'sb-row', 'data-tip': m.k }, [
     el('span', { class: 'name' }, m.k),
     el('div', { class: 'v num' }, [
       el('span', {}, m.v ?? '—'),
@@ -2418,7 +2511,7 @@ function renderShipping(m) {
   // Card grid
   const grid = el('div', { class: 'ship-grid' });
   for (const c of MOCK.shipping.cards) {
-    const card = el('div', { class: 'ship-card' }, [
+    const card = el('div', { class: 'ship-card', 'data-tip': c.ttl }, [
       el('div', { class: 'ttl' }, [
         el('span', {}, c.ttl),
         el('span', { class: 'api' }, 'API · WIP'),
@@ -2551,7 +2644,7 @@ function buildSignals(signals) {
 }
 
 function buildKpi(k) {
-  return el('div', { class: 'kpi' + (k.tier === 1 ? ' tier1' : '') }, [
+  return el('div', { class: 'kpi' + (k.tier === 1 ? ' tier1' : ''), 'data-tip': k.label }, [
     el('div', { class: 'label' }, k.label),
     el('div', { class: 'value' }, [
       el('span', { class: 'big num' }, k.value ?? '—'),
@@ -2566,7 +2659,7 @@ function buildKpi(k) {
 }
 
 function buildOhlc(l, v) {
-  return el('div', { class: 'ohlc-cell' }, [
+  return el('div', { class: 'ohlc-cell', 'data-tip': l }, [
     el('div', { class: 'l' }, l),
     el('div', { class: 'v num' }, v ?? '—'),
   ]);
@@ -2769,7 +2862,7 @@ function buildEqTable(title, rows, cols) {
   ]));
   const t = el('table', { class: 'eq-table' });
   const thead = el('thead', {}, [
-    el('tr', {}, cols.map(c => el('th', {}, c)))
+    el('tr', {}, cols.map(c => el('th', { 'data-tip': c }, c)))
   ]);
   t.appendChild(thead);
   const tbody = el('tbody');
