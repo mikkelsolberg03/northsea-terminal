@@ -382,6 +382,8 @@
 .signal-sec {
   padding: 10px 16px;
   border-bottom: 1px solid var(--rule);
+}
+.signal-sec > .collapsible-hd {
   display: flex; align-items: center; gap: 10px;
 }
 .signal-sec:last-child { border-bottom: none; }
@@ -1138,6 +1140,40 @@ body {
   line-height: 1.45;
   margin-top: 4px;
 }
+
+/* ── Collapsible signal / insight blocks ─────────────────── */
+.collapsible-hd {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+.collapsible-hd .chev {
+  flex-shrink: 0;
+  font-size: 8px;
+  color: var(--ink-4);
+  margin-top: 2px;
+  transition: transform 0.16s;
+  line-height: 1;
+}
+.open > .collapsible-hd .chev { transform: rotate(90deg); }
+.collapsible-body { display: none; }
+.open > .collapsible-body { display: block; }
+.sig-why {
+  font-size: 10px; color: var(--ink-3);
+  margin-top: 6px; line-height: 1.4;
+}
+.sig-why::before { content: '→ Why: '; color: var(--ink-4); }
+.sig-implication {
+  font-size: 9.5px; color: var(--ink-4);
+  margin-top: 7px; padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--rule) 50%, transparent);
+}
+.sig-implication b { color: var(--ink-3); font-weight: 600; }
+.signal-sec > .collapsible-body { padding-left: 17px; padding-top: 8px; }
+.signal-primary > .collapsible-body { padding-top: 6px; }
 
 .news-section { flex: 1; }
 .news-head {
@@ -2229,17 +2265,35 @@ function renderRight() {
   const data = MOCK[state.industry];
 
   // Insights
+  const impLine = tone =>
+    tone === 'bullish' ? 'Bullish — supportive for prices and equities' :
+    tone === 'bearish' ? 'Bearish — negative pressure on prices and equities' :
+                         'Neutral/Watch — monitor for directional shift';
+
   const insBlock = el('div', { class: 'insights' }, [
     el('div', { class: 'insights-head' }, 'Key Insights · Why It Matters'),
-    ...data.insights.map(i => el('div', { class: 'insight ' + i.tone + ' ' + (i.impact || 'med') }, [
-      el('div', { class: 'ihead' }, [
-        el('span', { class: 'itag' }, i.tag),
-        el('span', { class: 'iimpact', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
-      ]),
-      el('div', { class: 'ititle' }, i.title),
-      el('div', { class: 'idesc', html: i.desc }),
-      i.why ? el('div', { class: 'iwhy' }, i.why) : null,
-    ])),
+    ...data.insights.map(i => {
+      const div = el('div', { class: 'insight ' + i.tone + ' ' + (i.impact || 'med') });
+      const hd = el('div', { class: 'collapsible-hd' }, [
+        el('div', { style: 'flex:1;min-width:0' }, [
+          el('div', { class: 'ihead' }, [
+            el('span', { class: 'itag' }, i.tag),
+            el('span', { class: 'iimpact', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
+          ]),
+          el('div', { class: 'ititle' }, i.title),
+        ]),
+        el('span', { class: 'chev' }, '▶'),
+      ]);
+      const body = el('div', { class: 'collapsible-body' }, [
+        el('div', { class: 'idesc', html: i.desc }),
+        i.why ? el('div', { class: 'sig-why' }, i.why) : null,
+        el('div', { class: 'sig-implication', html: '<b>Market implication:</b> ' + impLine(i.tone) }),
+      ]);
+      hd.addEventListener('click', () => div.classList.toggle('open'));
+      div.appendChild(hd);
+      div.appendChild(body);
+      return div;
+    }),
   ]);
   r.appendChild(insBlock);
 
@@ -2587,27 +2641,45 @@ function buildSignalStack(primary, secondaries) {
   ]));
   const grid = el('div', { class: 'signals-stack' });
 
-  // Primary
-  grid.appendChild(el('div', { class: 'signal-primary ' + primary.tone + ' ' + primary.impact }, [
-    el('div', { class: 'sp-row' }, [
-      el('span', { class: 'sp-led' }),
-      el('span', { class: 'sp-tag' }, primary.tag),
-      el('span', { class: 'sp-impact' }, [
-        el('span', { class: 'impact-bars', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
-        el('span', {}, (primary.impact || 'med').toUpperCase() + ' IMPACT'),
+  const impLine = tone =>
+    tone === 'bullish' ? 'Bullish — supportive for near-term price action' :
+    tone === 'bearish' ? 'Bearish — negative near-term price pressure' :
+                         'Neutral/Watch — directional signal pending';
+
+  // Primary (collapsible)
+  const primaryDiv = el('div', { class: 'signal-primary ' + primary.tone + ' ' + primary.impact });
+  const primaryHd = el('div', { class: 'collapsible-hd' }, [
+    el('div', { style: 'flex:1;min-width:0' }, [
+      el('div', { class: 'sp-row' }, [
+        el('span', { class: 'sp-led' }),
+        el('span', { class: 'sp-tag' }, primary.tag),
+        el('span', { class: 'sp-impact' }, [
+          el('span', { class: 'impact-bars', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
+          el('span', {}, (primary.impact || 'med').toUpperCase() + ' IMPACT'),
+        ]),
       ]),
+      el('div', { class: 'sp-headline' }, primary.headline),
     ]),
-    el('div', { class: 'sp-headline' }, primary.headline),
+    el('span', { class: 'chev' }, '▶'),
+  ]);
+  const primaryBody = el('div', { class: 'collapsible-body' }, [
     el('div', { class: 'sp-detail', html: primary.detail }),
     primary.action ? el('div', { class: 'sp-action', html: primary.action }) : null,
-  ]));
+    primary.why ? el('div', { class: 'sig-why' }, primary.why) : null,
+    el('div', { class: 'sig-implication', html: '<b>Market implication:</b> ' + impLine(primary.tone) }),
+  ]);
+  primaryHd.addEventListener('click', () => primaryDiv.classList.toggle('open'));
+  primaryDiv.appendChild(primaryHd);
+  primaryDiv.appendChild(primaryBody);
+  grid.appendChild(primaryDiv);
 
-  // Secondaries
+  // Secondaries (collapsible)
   const secs = el('div', { class: 'signal-secondaries' });
   for (const s of secondaries.slice(0, 3)) {
-    secs.appendChild(el('div', { class: 'signal-sec ' + s.tone + ' ' + (s.impact || 'med') }, [
+    const secDiv = el('div', { class: 'signal-sec ' + s.tone + ' ' + (s.impact || 'med') });
+    const secHd = el('div', { class: 'collapsible-hd' }, [
       el('span', { class: 'ss-led' }),
-      el('div', { class: 'ss-content' }, [
+      el('div', { class: 'ss-content', style: 'flex:1;min-width:0' }, [
         el('div', { class: 'ss-headline' }, s.headline),
         el('div', { class: 'ss-meta' }, [
           el('span', { class: 'ss-tag' }, s.tag),
@@ -2615,7 +2687,17 @@ function buildSignalStack(primary, secondaries) {
         ]),
       ]),
       el('span', { class: 'ss-impact', html: '<span class="b1"></span><span class="b2"></span><span class="b3"></span>' }),
-    ]));
+      el('span', { class: 'chev' }, '▶'),
+    ]);
+    const secBody = el('div', { class: 'collapsible-body' }, [
+      s.detail ? el('div', { class: 'sp-detail', html: s.detail }) : null,
+      s.why ? el('div', { class: 'sig-why' }, s.why) : null,
+      el('div', { class: 'sig-implication', html: '<b>Market implication:</b> ' + impLine(s.tone) }),
+    ]);
+    secHd.addEventListener('click', () => secDiv.classList.toggle('open'));
+    secDiv.appendChild(secHd);
+    secDiv.appendChild(secBody);
+    secs.appendChild(secDiv);
   }
   grid.appendChild(secs);
   stack.appendChild(grid);
