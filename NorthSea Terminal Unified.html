@@ -687,6 +687,37 @@ body {
 .mode-switch .glyph.terminal  { background: linear-gradient(to bottom, currentColor 50%, transparent 50%); opacity: 0.7; border-color: currentColor; }
 .mode-switch .glyph.focus     { background: transparent; opacity: 0.55; }
 
+/* ─── View mode switch (Beginner / Intermediate / Terminal) ── */
+.vm-switch {
+  display: inline-flex;
+  align-items: stretch;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--header-fg) 12%, transparent);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.vm-switch button {
+  background: transparent;
+  border: none;
+  border-right: 1px solid color-mix(in srgb, var(--header-fg) 10%, transparent);
+  cursor: pointer;
+  padding: 0 9px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--header-fg) 45%, transparent);
+  transition: color 120ms, background 120ms;
+  white-space: nowrap;
+}
+.vm-switch button:last-child { border-right: none; }
+.vm-switch button:hover { color: color-mix(in srgb, var(--header-fg) 75%, transparent); }
+.vm-switch button.on {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 /* ─── Macro strip (row 2) ─────────────────────────────────── */
 /* ─── Macro strip (row 2) ───────────────────────────── */
 .strip {
@@ -1636,6 +1667,12 @@ body {
       <kbd>/</kbd>
     </button>
 
+    <div class="vm-switch" id="vm-switch" role="tablist" aria-label="View mode">
+      <button data-vm="beginner">Beginner</button>
+      <button data-vm="intermediate">Intermediate</button>
+      <button class="on" data-vm="terminal">Terminal</button>
+    </div>
+
     <div class="mode-switch" id="mode-switch" role="tablist" aria-label="Visual mode">
       <button data-mode="workspace" title="Light Workspace · daytime analysis"><span class="glyph workspace"></span>Workspace</button>
       <button class="on" data-mode="terminal" title="Terminal · trading-desk default"><span class="glyph terminal"></span>Terminal</button>
@@ -1840,6 +1877,7 @@ const state = {
   salmonRange: '1M',
   oilChart: 'brent',
   salmonChart: 'nasdaq',
+  viewMode: 'terminal',
 };
 
 /* ─── MOCK DATA ───────────────────────────────────────────── */
@@ -3088,6 +3126,7 @@ function renderAll() {
   renderSidebar();
   renderMain();
   renderRight();
+  applyViewMode();
 }
 
 /* ─── Tweaks ──────────────────────────────────────── */
@@ -3132,6 +3171,32 @@ function markActive(attr, v) {
   document.querySelectorAll(`[data-${attr}]`).forEach(b => b.classList.toggle('active', b.dataset[attr] === String(v)));
 }
 
+function applyViewMode() {
+  const vm = state.viewMode;
+  const primaries   = [...document.querySelectorAll('.signal-primary')];
+  const secondaries = [...document.querySelectorAll('.signal-sec')];
+  const insights    = [...document.querySelectorAll('.insight')];
+  const all = [...primaries, ...secondaries, ...insights];
+
+  if (vm === 'beginner') {
+    all.forEach(el => el.classList.remove('open'));
+  } else if (vm === 'intermediate') {
+    all.forEach(el => el.classList.remove('open'));
+    primaries[0]?.classList.add('open');
+    insights[0]?.classList.add('open');
+  } else {
+    all.forEach(el => el.classList.add('open'));
+  }
+}
+
+function setViewMode(vm) {
+  state.viewMode = vm;
+  document.querySelectorAll('#vm-switch button').forEach(b =>
+    b.classList.toggle('on', b.dataset.vm === vm)
+  );
+  applyViewMode();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Industry tabs
   document.querySelectorAll('.industry-tab').forEach(b => {
@@ -3141,6 +3206,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-variant-opt]').forEach(b => b.addEventListener('click', () => setVariant(b.dataset.variantOpt)));
   document.querySelectorAll('[data-mode-opt]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeOpt)));
   document.querySelectorAll('#mode-switch button[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  document.querySelectorAll('#vm-switch button[data-vm]').forEach(b => b.addEventListener('click', () => setViewMode(b.dataset.vm)));
   // Apply persisted mode on load
   setMode(state.mode);
   document.querySelectorAll('[data-density]').forEach(b => b.addEventListener('click', () => setDensity(b.dataset.density)));
